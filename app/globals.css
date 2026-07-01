@@ -1,1 +1,93 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens — "Atelier" fashion/e-commerce theme.
+ * Centralised here so the palette/typography can be retuned in one place
+ * (e.g. when exact Figma values are provided) without touching components.
+ */
+@theme {
+  /* Brand + neutrals */
+  --color-background: #ffffff;
+  --color-surface: #f6f3ec;
+  --color-surface-strong: #ece6da;
+  --color-foreground: #16130f;
+  --color-muted: #6f6a61;
+  --color-border: #e7e1d6;
+
+  /* Accent (ink-on-sand editorial look) */
+  --color-accent: #16130f;
+  --color-accent-foreground: #ffffff;
+  --color-highlight: #b07d4b;
+
+  /* Typography */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+
+  /* Radii */
+  --radius-card: 0.25rem;
+
+  /* Layout */
+  --spacing-shell: 1.5rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible, accessible focus ring for keyboard users */
+  :where(a, button, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Editorial wide letter-spacing used for eyebrow labels */
+  .tracking-label {
+    letter-spacing: 0.22em;
+  }
+
+  @keyframes dk-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dk-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: dk-fade-in 0.2s ease-out both;
+  }
+
+  .animate-pop-in {
+    animation: dk-pop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-pop-in {
+      animation: none;
+    }
+  }
+}
