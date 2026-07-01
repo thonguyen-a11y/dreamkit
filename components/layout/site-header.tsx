@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
+import { useCart } from "@/components/cart/cart-context";
 import { cn } from "@/lib/cn";
 
 interface NavLink {
@@ -21,6 +22,7 @@ const NAV_LINKS: readonly NavLink[] = [
 export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { open: openAuth } = useAuthModal();
+  const { count } = useCart();
 
   return (
     <header
@@ -62,13 +64,18 @@ export function SiteHeader() {
           >
             <SearchIcon />
           </button>
-          <button
-            type="button"
-            aria-label="Giỏ hàng"
+          <Link
+            href="/cart"
+            aria-label={count > 0 ? `Giỏ hàng, ${count} sản phẩm` : "Giỏ hàng"}
             className="relative text-foreground/80 transition-colors hover:text-foreground"
           >
             <CartIcon />
-          </button>
+            {count > 0 ? (
+              <span className="absolute -right-2 -top-2 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] font-semibold leading-4 text-accent-foreground">
+                {count}
+              </span>
+            ) : null}
+          </Link>
           <button
             type="button"
             onClick={() => openAuth("login")}

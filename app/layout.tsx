@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { AuthModalProvider } from "@/components/auth/auth-modal-provider";
+import { CartProvider } from "@/components/cart/cart-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,7 +37,9 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen antialiased">
-        <AuthModalProvider>{children}</AuthModalProvider>
+        <CartProvider>
+          <AuthModalProvider>{children}</AuthModalProvider>
+        </CartProvider>
       </body>
     </html>
   );

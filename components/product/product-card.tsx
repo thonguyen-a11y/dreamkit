@@ -1,5 +1,6 @@
 import { memo } from "react";
 import Image from "next/image";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/types";
 import { ColorSwatches } from "./color-swatches";
@@ -30,12 +31,7 @@ function ProductCardImpl({ product, priority = false }: ProductCardProps) {
         />
 
         <div className="absolute inset-x-0 bottom-0 translate-y-full p-4 transition-transform duration-300 ease-out group-hover:translate-y-0">
-          <button
-            type="button"
-            className="w-full rounded-card bg-accent py-3 text-xs font-medium uppercase tracking-label text-accent-foreground transition-colors hover:bg-foreground/85"
-          >
-            Thêm vào giỏ
-          </button>
+          <AddToCartButton productId={product.id} />
         </div>
       </div>
 
