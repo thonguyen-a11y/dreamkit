@@ -4,12 +4,14 @@ import { ColorFilter } from "@/components/product/color-filter";
 import { ProductCard } from "@/components/product/product-card";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { useStore } from "@/components/store/store-context";
 import { useProductFilter } from "@/hooks/use-product-filter";
-import { FILTER_COLORS, PRODUCTS } from "@/lib/products";
+import { FILTER_COLORS } from "@/lib/products";
 
 export function ShopSection() {
+  const { products, isHydrated } = useStore();
   const { activeColors, filteredProducts, toggleColor, clearFilters, isFiltering } =
-    useProductFilter(PRODUCTS);
+    useProductFilter(products.slice(0, 8));
 
   return (
     <section id="shop" className="bg-background py-20 lg:py-28">
@@ -29,7 +31,16 @@ export function ShopSection() {
           />
         </div>
 
-        {filteredProducts.length > 0 ? (
+        {!isHydrated ? (
+          <ul className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <li
+                key={index}
+                className="aspect-[3/4] animate-pulse rounded-card bg-surface"
+              />
+            ))}
+          </ul>
+        ) : filteredProducts.length > 0 ? (
           <ul className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
             {filteredProducts.map((product, index) => (
               <li key={product.id}>

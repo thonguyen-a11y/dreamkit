@@ -6,7 +6,7 @@
  */
 
 export interface LoginValues {
-  identifier: string;
+  email: string;
   password: string;
 }
 
@@ -15,6 +15,8 @@ export interface RegisterValues {
   email: string;
   password: string;
   confirmPassword: string;
+  address: string;
+  phone: string;
 }
 
 export type FieldErrors<T> = Partial<Record<keyof T, string>>;
@@ -25,8 +27,8 @@ const MIN_PASSWORD_LENGTH = 6;
 export function validateLogin(values: LoginValues): FieldErrors<LoginValues> {
   const errors: FieldErrors<LoginValues> = {};
 
-  if (!values.identifier.trim()) {
-    errors.identifier = "Vui lòng nhập email hoặc tên tài khoản.";
+  if (!EMAIL_PATTERN.test(values.email.trim())) {
+    errors.email = "Email không hợp lệ.";
   }
   if (!values.password) {
     errors.password = "Vui lòng nhập mật khẩu.";
@@ -51,6 +53,12 @@ export function validateRegister(
   }
   if (values.confirmPassword !== values.password) {
     errors.confirmPassword = "Mật khẩu xác nhận không khớp.";
+  }
+  if (!values.address.trim()) {
+    errors.address = "Vui lòng nhập địa chỉ.";
+  }
+  if (!values.phone.trim()) {
+    errors.phone = "Vui lòng nhập số điện thoại.";
   }
 
   return errors;

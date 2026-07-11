@@ -1,19 +1,17 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy to EC2
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 # Allow one concurrent deployment, cancelling in-progress runs.
 concurrency:
-  group: pages
+  group: ec2-deploy
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -31,26 +29,74 @@ jobs:
       - name: Install dependencies
         run: yarn install --network-timeout 300000
 
-      - name: Build static export
+      - name: Build standalone server
         run: yarn build
         env:
-          GITHUB_PAGES: "true"
+          # Baked into the client bundle at build time — API_PROXY_URL is
+          # server-only and is instead read at runtime on the EC2 instance.
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_UPLOADS_URL: ${{ secrets.NEXT_PUBLIC_UPLOADS_URL }}
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+      - name: Assemble standalone release bundle
+        run: |
+          set -euo pipefail
+          mkdir -p .next/standalone/.next/static
+          cp -r .next/static/. .next/standalone/.next/static/
+          cp -r public .next/standalone/public
+          tar -czf release.tar.gz -C .next/standalone .
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: ./out
+          name: release
+          path: release.tar.gz
+          retention-days: 3
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release
+
+      - name: Copy release to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          source: release.tar.gz
+          target: /tmp
+
+      - name: Extract release and reload with pm2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          envs: EC2_APP_DIR
+          script: |
+            set -euo pipefail
+            APP_DIR="${EC2_APP_DIR:?EC2_APP_DIR secret is not set}"
+            mkdir -p "$APP_DIR"
+
+            # Clear the previous build, but keep any server-managed .env files.
+            find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name '.env*' -exec rm -rf {} +
+            tar -xzf /tmp/release.tar.gz -C "$APP_DIR"
+            rm -f /tmp/release.tar.gz
+
+            cd "$APP_DIR"
+            export PORT="${PORT:-3000}"
+            export HOSTNAME="0.0.0.0"
+            if pm2 describe dreamkit > /dev/null 2>&1; then
+              pm2 reload dreamkit --update-env
+            else
+              pm2 start server.js --name dreamkit --update-env
+            fi
+            pm2 save
+        env:
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}

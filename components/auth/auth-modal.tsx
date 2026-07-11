@@ -1,6 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
+import { getPostLoginRedirect } from "@/lib/auth-redirect";
+import type { AuthUser } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { useAuthModal, type AuthMode } from "./auth-modal-context";
 import { LoginForm } from "./login-form";
@@ -12,8 +15,21 @@ const TABS: ReadonlyArray<{ mode: AuthMode; label: string }> = [
 ];
 
 export function AuthModal() {
+  const router = useRouter();
   const { isOpen, mode, close, setMode } = useAuthModal();
   const isLogin = mode === "login";
+
+  function handleSuccess(user: AuthUser) {
+    close();
+
+    const redirectPath = getPostLoginRedirect(user);
+    if (redirectPath) {
+      router.push(redirectPath);
+      return;
+    }
+
+    router.refresh();
+  }
 
   return (
     <Modal
@@ -54,9 +70,9 @@ export function AuthModal() {
       </div>
 
       {isLogin ? (
-        <LoginForm onSuccess={close} />
+        <LoginForm onSuccess={handleSuccess} />
       ) : (
-        <RegisterForm onSuccess={close} />
+        <RegisterForm onRegistered={() => setMode("login")} />
       )}
 
       <p className="mt-6 text-center text-xs text-muted">

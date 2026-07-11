@@ -1,10 +1,23 @@
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
 interface TeamPerk {
   readonly title: string;
   readonly description: string;
 }
+
+interface ContactLink {
+  readonly label: string;
+  readonly href: string;
+}
+
+const CONTACT_LINKS: readonly ContactLink[] = [
+  { label: "Facebook", href: "https://www.facebook.com/dreamkitvn" },
+  { label: "Zalo", href: "https://zalo.me/0934907570" },
+  { label: "Điện thoại", href: "tel:0934907570" },
+];
+
+const CONTACT_LINK_CLASSNAME =
+  "inline-flex h-14 items-center justify-center gap-2 rounded-card bg-accent px-9 text-sm font-medium uppercase tracking-label text-accent-foreground transition-colors duration-200 hover:bg-foreground/85";
 
 const TEAM_PERKS: readonly TeamPerk[] = [
   {
@@ -44,10 +57,18 @@ export function TeamOrder() {
               </li>
             ))}
           </ul>
-          <div className="flex justify-center">
-            <Button size="lg" className="px-12">
-              Liên hệ đặt đội ngay
-            </Button>
+          <div className="flex flex-wrap justify-center gap-4">
+            {CONTACT_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target={link.href.startsWith("tel:") ? undefined : "_blank"}
+                rel={link.href.startsWith("tel:") ? undefined : "noopener noreferrer"}
+                className={CONTACT_LINK_CLASSNAME}
+              >
+                {link.label}
+              </a>
+            ))}
           </div>
         </div>
       </Container>

@@ -2,19 +2,37 @@
 
 import { useState } from "react";
 import { ProductCard } from "@/components/product/product-card";
+import { useStore } from "@/components/store/store-context";
 import { useCatalog } from "@/hooks/use-catalog";
-import { PRODUCTS } from "@/lib/products";
 import { cn } from "@/lib/cn";
 import { Pagination } from "./pagination";
 import { ShopFilters } from "./shop-filters";
 import { ShopToolbar } from "./shop-toolbar";
 
 export function ShopCatalog() {
-  const catalog = useCatalog(PRODUCTS);
+  const { products, isHydrated } = useStore();
+  const catalog = useCatalog(products);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  if (!isHydrated) {
+    return (
+      <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
+        <aside className="hidden h-96 animate-pulse rounded-card bg-surface lg:block" />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 md:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div
+              key={index}
+              className="aspect-[3/4] animate-pulse rounded-card bg-surface"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const filters = (
     <ShopFilters
+      products={products}
       activeColors={catalog.activeColors}
       activeCollars={catalog.activeCollars}
       activeTypes={catalog.activeTypes}

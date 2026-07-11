@@ -91,3 +91,111 @@ export interface CatalogueCollection {
   readonly title: string;
   readonly items: readonly CatalogueItem[];
 }
+
+/** Lifecycle status for a customer order. */
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+/** Application role used for route access control. */
+export type UserRole = "admin" | "customer";
+
+export interface AuthUser {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly role: UserRole;
+  readonly phone?: string;
+  readonly address?: string;
+}
+
+export interface OrderLine {
+  readonly productId: string;
+  readonly productName: string;
+  readonly unitPrice: number;
+  readonly quantity: number;
+  readonly lineTotal: number;
+}
+
+export interface Order {
+  readonly id: string;
+  readonly orderNumber: string;
+  readonly userId?: string;
+  readonly customerName: string;
+  readonly customerPhone: string;
+  readonly customerEmail?: string;
+  readonly lines: readonly OrderLine[];
+  readonly subtotal: number;
+  /** Normalized discount code applied to this order, if any. */
+  readonly discountCode?: string;
+  /** Amount deducted from the subtotal by the discount code; 0 if none applied. */
+  readonly discountAmount: number;
+  /** Amount actually charged: subtotal minus discountAmount. */
+  readonly total: number;
+  readonly status: OrderStatus;
+  readonly createdAt: string;
+  readonly notes?: string;
+}
+
+
+export interface User {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly address: string;
+  readonly role: UserRole;
+  readonly createdAt: string;
+  readonly isEmailVerified: boolean;
+}
+
+/** Read state of a contact-form submission. */
+export type ContactStatus = "unread" | "read";
+
+export interface Contact {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly message: string;
+  readonly status: ContactStatus;
+  readonly createdAt: string;
+}
+
+/** How a discount code's value is interpreted. */
+export type DiscountType = "percentage" | "fixed";
+
+/** Computed (not stored) lifecycle status of a discount code. */
+export type DiscountCodeStatus =
+  | "scheduled"
+  | "active"
+  | "expired"
+  | "exhausted"
+  | "disabled";
+
+export interface DiscountCode {
+  readonly id: string;
+  /** Normalized (trimmed, uppercased) unique code customers enter at checkout. */
+  readonly code: string;
+  readonly description?: string;
+  readonly discountType: DiscountType;
+  /** Percentage (1-100) or a non-negative fixed VND amount, per discountType. */
+  readonly value: number;
+  readonly minOrderAmount?: number;
+  /** ISO date string; code is not usable before this date. */
+  readonly startsAt?: string;
+  /** ISO date string; code is not usable after this date. */
+  readonly expiresAt?: string;
+  /** Total redemption cap across all customers; unlimited if omitted. */
+  readonly maxUses?: number;
+  readonly perCustomerLimit?: number;
+  /** Manual on/off switch, independent of dates and usage. */
+  readonly isActive: boolean;
+  /** Number of times redeemed so far; tracked by the checkout flow. */
+  readonly usedCount: number;
+  readonly createdAt: string;
+}

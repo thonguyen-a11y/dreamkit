@@ -15,13 +15,14 @@ interface NavLink {
 const NAV_LINKS: readonly NavLink[] = [
   { label: "Trang chủ", href: "/" },
   { label: "Cửa hàng", href: "/shop" },
+  { label: "Catalogue", href: "/catalogue" },
   { label: "Hành trình", href: "/#journey" },
   { label: "FAQs", href: "/faqs" },
 ];
 
 export function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { open: openAuth } = useAuthModal();
+  const { open: openAuth, isAuthenticated, isAdmin } = useAuthModal();
   const { count } = useCart();
 
   return (
@@ -76,21 +77,24 @@ export function SiteHeader() {
               </span>
             ) : null}
           </Link>
-          <button
-            type="button"
-            onClick={() => openAuth("login")}
-            aria-label="Đăng nhập"
-            className="text-foreground/80 transition-colors hover:text-foreground"
-          >
-            <UserIcon />
-          </button>
-          <button
-            type="button"
-            onClick={() => openAuth("login")}
-            className="hidden rounded-card border border-foreground px-4 py-2 text-xs font-medium uppercase tracking-label text-foreground transition-colors hover:bg-foreground hover:text-background md:inline-flex"
-          >
-            Đăng nhập
-          </button>
+          {isAuthenticated ? (
+            <Link
+              href="/account"
+              aria-label="Tài khoản"
+              className="text-foreground/80 transition-colors hover:text-foreground"
+            >
+              <UserIcon />
+            </Link>
+          ) : null}
+          {!isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => openAuth("login")}
+              className="hidden rounded-card border border-foreground px-4 py-2 text-xs font-medium uppercase tracking-label text-foreground transition-colors hover:bg-foreground hover:text-background md:inline-flex"
+            >
+              Đăng nhập
+            </button>
+          ) : null}
           <button
             type="button"
             aria-label={isMenuOpen ? "Đóng menu" : "Mở menu"}
@@ -109,7 +113,7 @@ export function SiteHeader() {
         aria-label="Điều hướng di động"
         className={cn(
           "overflow-hidden border-t border-border md:hidden",
-          isMenuOpen ? "max-h-72" : "max-h-0",
+          isMenuOpen ? "max-h-96" : "max-h-0",
           "transition-[max-height] duration-300 ease-out",
         )}
       >
@@ -125,18 +129,43 @@ export function SiteHeader() {
               </Link>
             </li>
           ))}
-          <li>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                openAuth("login");
-              }}
-              className="block w-full py-2 text-left text-sm font-medium uppercase tracking-label text-foreground/80 hover:text-foreground"
-            >
-              Đăng nhập / Đăng ký
-            </button>
-          </li>
+          {!isAuthenticated ? (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  openAuth("login");
+                }}
+                className="block w-full py-2 text-left text-sm font-medium uppercase tracking-label text-foreground/80 hover:text-foreground"
+              >
+                Đăng nhập / Đăng ký
+              </button>
+            </li>
+          ) : (
+            <>
+              <li>
+                <Link
+                  href="/account"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block py-2 text-sm font-medium uppercase tracking-label text-foreground/80 hover:text-foreground"
+                >
+                  Tài khoản
+                </Link>
+              </li>
+              {isAdmin ? (
+                <li>
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block py-2 text-sm font-medium uppercase tracking-label text-foreground/80 hover:text-foreground"
+                  >
+                    Quản trị
+                  </Link>
+                </li>
+              ) : null}
+            </>
+          )}
         </ul>
       </nav>
     </header>

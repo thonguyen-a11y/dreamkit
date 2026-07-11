@@ -2,17 +2,96 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { applyDiscountCode, type DiscountApplyFailureReason } from "@/lib/discount-codes";
+import { validateDiscountCodeApi } from "@/lib/discount-codes-api";
 import { formatPrice } from "@/lib/products";
 import { cn } from "@/lib/cn";
 import type { CartDetailLine } from "@/lib/cart";
+import { CheckoutPanel } from "./checkout-panel";
 import { useCart } from "./cart-context";
 
 const LINK_BUTTON_CLASS =
   "inline-flex h-11 items-center justify-center rounded-card bg-accent px-6 text-xs font-medium uppercase tracking-label text-accent-foreground transition-colors hover:bg-foreground/85";
 
+const DISCOUNT_REASON_MESSAGES: Record<DiscountApplyFailureReason, string> = {
+  scheduled: "Mã giảm giá chưa đến thời gian áp dụng.",
+  expired: "Mã giảm giá đã hết hạn.",
+  exhausted: "Mã giảm giá đã hết lượt sử dụng.",
+  disabled: "Mã giảm giá hiện không hoạt động.",
+  below_minimum: "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã này.",
+};
+
+interface AppliedDiscount {
+  readonly code: string;
+  readonly amount: number;
+}
+
 export function CartView() {
   const { items, subtotal, count, removeItem, setQuantity, clear } = useCart();
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [discountInput, setDiscountInput] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+
+  const total = subtotal - (appliedDiscount?.amount ?? 0);
+
+  async function handleApplyDiscount() {
+    const code = discountInput.trim();
+    if (!code) {
+      return;
+    }
+
+    setIsApplyingDiscount(true);
+    setDiscountError(null);
+
+    const result = await validateDiscountCodeApi(code);
+    if (!result.ok) {
+      setDiscountError("Mã giảm giá không tồn tại.");
+      setIsApplyingDiscount(false);
+      return;
+    }
+
+    const applied = applyDiscountCode(result.discountCode, subtotal);
+    if (!applied.ok) {
+      setDiscountError(DISCOUNT_REASON_MESSAGES[applied.reason]);
+      setIsApplyingDiscount(false);
+      return;
+    }
+
+    setAppliedDiscount({ code: result.discountCode.code, amount: applied.discountAmount });
+    setIsApplyingDiscount(false);
+  }
+
+  function handleRemoveDiscount() {
+    setAppliedDiscount(null);
+    setDiscountInput("");
+    setDiscountError(null);
+  }
+
+  if (orderNumber) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-card border border-border bg-surface py-24 text-center">
+        <p className="font-display text-3xl text-foreground">Đặt hàng thành công</p>
+        <p className="max-w-md text-sm text-muted">
+          Cảm ơn bạn! Mã đơn hàng của bạn là{" "}
+          <span className="font-semibold text-foreground">{orderNumber}</span>.
+          Dreamkit sẽ liên hệ xác nhận trong thời gian sớm nhất.
+        </p>
+        <div className="mt-2 flex flex-wrap justify-center gap-3">
+          <Link href="/shop" className={cn(LINK_BUTTON_CLASS)}>
+            Tiếp tục mua sắm
+          </Link>
+          <Link href="/account" className={cn(LINK_BUTTON_CLASS)}>
+            Xem đơn hàng
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -75,18 +154,73 @@ export function CartView() {
             <dt className="text-muted">Phí vận chuyển</dt>
             <dd className="text-muted">Tính khi thanh toán</dd>
           </div>
+          {appliedDiscount ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-muted">Giảm giá ({appliedDiscount.code})</dt>
+              <dd className="font-medium text-foreground">
+                −{formatPrice(appliedDiscount.amount)}
+              </dd>
+            </div>
+          ) : null}
         </dl>
-        <div className="mt-6 flex items-center justify-between border-t border-border pt-6">
+
+        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+          {appliedDiscount ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-foreground">
+                Đã áp dụng mã <span className="font-semibold">{appliedDiscount.code}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleRemoveDiscount}
+                className="text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Xoá mã
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={discountInput}
+                onChange={(event) => setDiscountInput(event.target.value)}
+                placeholder="Mã giảm giá"
+                className="h-11 flex-1 rounded-card border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-foreground"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isApplyingDiscount || !discountInput.trim()}
+                onClick={() => void handleApplyDiscount()}
+              >
+                Áp dụng
+              </Button>
+            </div>
+          )}
+          {discountError ? <p className="text-xs text-red-600">{discountError}</p> : null}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between border-t border-border pt-6">
           <span className="text-sm font-semibold uppercase tracking-label text-foreground">
             Tổng cộng
           </span>
           <span className="font-display text-2xl text-foreground">
-            {formatPrice(subtotal)}
+            {formatPrice(total)}
           </span>
         </div>
-        <Button size="lg" className="mt-6 w-full">
-          Tiến hành thanh toán
+        <Button
+          size="lg"
+          className="mt-6 w-full"
+          onClick={() => setShowCheckout((open) => !open)}
+        >
+          {showCheckout ? "Ẩn form đặt hàng" : "Tiến hành thanh toán"}
         </Button>
+        {showCheckout ? (
+          <CheckoutPanel
+            discountCode={appliedDiscount?.code}
+            discountAmount={appliedDiscount?.amount}
+            onSuccess={(number) => setOrderNumber(number)}
+          />
+        ) : null}
       </aside>
     </div>
   );

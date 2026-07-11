@@ -8,12 +8,25 @@ import type { NextConfig } from "next";
  */
 const isGithubPages = process.env.GITHUB_PAGES === "true";
 const repository = "dreamkit";
+const apiProxyOrigin = process.env.API_PROXY_URL ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  ...(isGithubPages ? { output: "export" as const } : { output: "standalone" }),
   trailingSlash: true,
   basePath: isGithubPages ? `/${repository}` : undefined,
   assetPrefix: isGithubPages ? `/${repository}/` : undefined,
+  async rewrites() {
+    if (isGithubPages) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${apiProxyOrigin}/api/:path*`,
+      },
+    ];
+  },
   images: {
     // GitHub Pages has no image optimization server, so serve images as-is.
     unoptimized: true,

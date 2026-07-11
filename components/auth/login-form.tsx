@@ -8,38 +8,59 @@ import {
   type FieldErrors,
   type LoginValues,
 } from "@/lib/auth-validation";
+import type { AuthUser } from "@/lib/types";
+import { useAuthModal } from "./auth-modal-context";
 import { TextField } from "./text-field";
 
-const EMPTY: LoginValues = { identifier: "", password: "" };
+const EMPTY: LoginValues = { email: "", password: "" };
 
 interface LoginFormProps {
-  onSuccess: () => void;
+  onSuccess: (user: AuthUser) => void;
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
+  const { authenticate, login } = useAuthModal();
   const [values, setValues] = useState<LoginValues>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors<LoginValues>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateLogin(values);
     setErrors(nextErrors);
-    if (isValid(nextErrors)) {
-      // Real authentication is delegated to the backend integration.
-      onSuccess();
+    setFormError(null);
+
+    if (!isValid(nextErrors)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await authenticate(values);
+      if (!result.ok) {
+        setFormError(result.message);
+        return;
+      }
+
+      login(result.session);
+      onSuccess(result.session.user);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       <TextField
-        label="Email hoặc tên tài khoản"
-        name="identifier"
-        autoComplete="username"
-        value={values.identifier}
-        error={errors.identifier}
+        label="Email"
+        name="email"
+        type="email"
+        autoComplete="email"
+        value={values.email}
+        error={errors.email}
         onChange={(event) =>
-          setValues((current) => ({ ...current, identifier: event.target.value }))
+          setValues((current) => ({ ...current, email: event.target.value }))
         }
         placeholder="ban@dreamkit.vn"
       />
@@ -56,18 +77,20 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         placeholder="••••••••"
       />
 
+      {formError ? <p className="text-xs text-red-600">{formError}</p> : null}
+
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-xs text-muted">
           <input type="checkbox" name="remember" className="size-4 rounded border-border" />
-          Ghi nhớ đăng nhập
+          Ghi nhớ mật khẩu
         </label>
         <a href="#" className="text-xs text-foreground underline-offset-4 hover:underline">
           Quên mật khẩu?
         </a>
       </div>
 
-      <Button type="submit" size="lg" className="mt-1 w-full">
-        Đăng nhập
+      <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
       </Button>
     </form>
   );

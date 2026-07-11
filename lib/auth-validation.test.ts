@@ -8,7 +8,7 @@ import {
 } from "./auth-validation";
 
 const validLogin: LoginValues = {
-  identifier: "user@dreamkit.vn",
+  email: "user@dreamkit.vn",
   password: "secret123",
 };
 
@@ -17,17 +17,24 @@ const validRegister: RegisterValues = {
   email: "user@dreamkit.vn",
   password: "secret123",
   confirmPassword: "secret123",
+  address: "123 Main St",
+  phone: "0901234567",
 };
 
 describe("validateLogin", () => {
-  it("passes with an identifier and password", () => {
+  it("passes with an email and password", () => {
     expect(isValid(validateLogin(validLogin))).toBe(true);
   });
 
-  it("flags empty identifier and password", () => {
-    const errors = validateLogin({ identifier: "  ", password: "" });
-    expect(errors.identifier).toBeDefined();
+  it("flags empty email and password", () => {
+    const errors = validateLogin({ email: "  ", password: "" });
+    expect(errors.email).toBeDefined();
     expect(errors.password).toBeDefined();
+  });
+
+  it("rejects an invalid email", () => {
+    const errors = validateLogin({ ...validLogin, email: "not-an-email" });
+    expect(errors.email).toBeDefined();
   });
 });
 
@@ -61,5 +68,15 @@ describe("validateRegister", () => {
   it("requires a name", () => {
     const errors = validateRegister({ ...validRegister, name: "" });
     expect(errors.name).toBeDefined();
+  });
+
+  it("requires address and phone", () => {
+    const errors = validateRegister({
+      ...validRegister,
+      address: "",
+      phone: "  ",
+    });
+    expect(errors.address).toBeDefined();
+    expect(errors.phone).toBeDefined();
   });
 });

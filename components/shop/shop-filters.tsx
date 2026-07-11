@@ -1,37 +1,15 @@
+"use client";
+
+import { useMemo } from "react";
 import { countBy, countColors } from "@/lib/catalog";
-import { COLOR_META, PRODUCTS } from "@/lib/products";
-import type { CollarType, ColorKey, ProductType } from "@/lib/types";
+import { COLOR_META } from "@/lib/products";
+import type { CollarType, ColorKey, Product, ProductType } from "@/lib/types";
 import { FilterGroup, type FilterOption } from "./filter-group";
-
-const COLOR_COUNTS = countColors(PRODUCTS);
-const COLLAR_COUNTS = countBy(PRODUCTS, "collar");
-const TYPE_COUNTS = countBy(PRODUCTS, "type");
-
-const COLOR_OPTIONS: readonly FilterOption<ColorKey>[] = (
-  Object.keys(COLOR_META) as ColorKey[]
-)
-  .filter((color) => (COLOR_COUNTS.get(color) ?? 0) > 0)
-  .map((color) => ({
-    value: color,
-    label: COLOR_META[color].label,
-    count: COLOR_COUNTS.get(color) ?? 0,
-    swatch: COLOR_META[color].hex,
-  }));
 
 const COLLAR_LABELS: Record<CollarType, string> = {
   polo: "Cổ polo",
   regular: "Cổ thường",
 };
-
-const COLLAR_OPTIONS: readonly FilterOption<CollarType>[] = (
-  ["polo", "regular"] as CollarType[]
-)
-  .filter((value) => (COLLAR_COUNTS.get(value) ?? 0) > 0)
-  .map((value) => ({
-    value,
-    label: COLLAR_LABELS[value],
-    count: COLLAR_COUNTS.get(value) ?? 0,
-  }));
 
 const TYPE_LABELS: Record<ProductType, string> = {
   jersey: "Áo Jersey",
@@ -39,17 +17,8 @@ const TYPE_LABELS: Record<ProductType, string> = {
   set: "Set quần áo bóng đá",
 };
 
-const TYPE_OPTIONS: readonly FilterOption<ProductType>[] = (
-  ["jersey", "polo-shirt", "set"] as ProductType[]
-)
-  .filter((value) => (TYPE_COUNTS.get(value) ?? 0) > 0)
-  .map((value) => ({
-    value,
-    label: TYPE_LABELS[value],
-    count: TYPE_COUNTS.get(value) ?? 0,
-  }));
-
 interface ShopFiltersProps {
+  products: readonly Product[];
   activeColors: ReadonlySet<ColorKey>;
   activeCollars: ReadonlySet<CollarType>;
   activeTypes: ReadonlySet<ProductType>;
@@ -61,6 +30,7 @@ interface ShopFiltersProps {
 }
 
 export function ShopFilters({
+  products,
   activeColors,
   activeCollars,
   activeTypes,
@@ -70,6 +40,39 @@ export function ShopFilters({
   onClear,
   hasActiveFilters,
 }: ShopFiltersProps) {
+  const colorOptions = useMemo(() => {
+    const counts = countColors(products);
+    return (Object.keys(COLOR_META) as ColorKey[])
+      .filter((color) => (counts.get(color) ?? 0) > 0)
+      .map((color) => ({
+        value: color,
+        label: COLOR_META[color].label,
+        count: counts.get(color) ?? 0,
+        swatch: COLOR_META[color].hex,
+      }));
+  }, [products]);
+
+  const collarOptions = useMemo(() => {
+    const counts = countBy(products, "collar");
+    return (["polo", "regular"] as CollarType[])
+      .filter((value) => (counts.get(value) ?? 0) > 0)
+      .map((value) => ({
+        value,
+        label: COLLAR_LABELS[value],
+        count: counts.get(value) ?? 0,
+      }));
+  }, [products]);
+
+  const typeOptions = useMemo(() => {
+    const counts = countBy(products, "type");
+    return (["jersey", "polo-shirt", "set"] as ProductType[])
+      .filter((value) => (counts.get(value) ?? 0) > 0)
+      .map((value) => ({
+        value,
+        label: TYPE_LABELS[value],
+        count: counts.get(value) ?? 0,
+      }));
+  }, [products]);
   return (
     <div className="flex flex-col">
       <div className="flex items-center justify-between border-b border-border pb-4">
@@ -89,19 +92,19 @@ export function ShopFilters({
 
       <FilterGroup
         title="Màu sắc"
-        options={COLOR_OPTIONS}
+        options={colorOptions}
         selected={activeColors}
         onToggle={onToggleColor}
       />
       <FilterGroup
         title="Cổ áo"
-        options={COLLAR_OPTIONS}
+        options={collarOptions}
         selected={activeCollars}
         onToggle={onToggleCollar}
       />
       <FilterGroup
         title="Loại"
-        options={TYPE_OPTIONS}
+        options={typeOptions}
         selected={activeTypes}
         onToggle={onToggleType}
       />

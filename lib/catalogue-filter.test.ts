@@ -26,13 +26,13 @@ describe("filterCatalogueCollections", () => {
   it("drops collections with no matching items", () => {
     const filtered = filterCatalogueCollections(
       CATALOGUE_COLLECTIONS,
-      new Set(["cream"]),
+      new Set(["red"]),
     );
 
     expect(filtered.every((collection) => collection.items.length > 0)).toBe(true);
     expect(
       filtered.some((collection) =>
-        collection.items.some((item) => item.colors.includes("cream")),
+        collection.items.some((item) => item.colors.includes("red")),
       ),
     ).toBe(true);
   });

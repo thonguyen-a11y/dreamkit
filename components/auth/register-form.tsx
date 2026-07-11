@@ -8,6 +8,7 @@ import {
   type FieldErrors,
   type RegisterValues,
 } from "@/lib/auth-validation";
+import { useAuthModal } from "./auth-modal-context";
 import { TextField } from "./text-field";
 
 const EMPTY: RegisterValues = {
@@ -15,27 +16,62 @@ const EMPTY: RegisterValues = {
   email: "",
   password: "",
   confirmPassword: "",
+  address: "",
+  phone: "",
 };
 
 interface RegisterFormProps {
-  onSuccess: () => void;
+  onRegistered: (email: string) => void;
 }
 
-export function RegisterForm({ onSuccess }: RegisterFormProps) {
+export function RegisterForm({ onRegistered }: RegisterFormProps) {
+  const { register } = useAuthModal();
   const [values, setValues] = useState<RegisterValues>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors<RegisterValues>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function update(field: keyof RegisterValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateRegister(values);
     setErrors(nextErrors);
-    if (isValid(nextErrors)) {
-      onSuccess();
+    setFormError(null);
+    setSuccessMessage(null);
+
+    if (!isValid(nextErrors)) {
+      return;
     }
+
+    setIsSubmitting(true);
+    try {
+      const result = await register(values);
+      if (!result.ok) {
+        setFormError(result.message);
+        return;
+      }
+
+      setSuccessMessage(result.message);
+      setValues(EMPTY);
+      onRegistered(result.email);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (successMessage) {
+    return (
+      <div className="flex flex-col gap-4 text-center">
+        <p className="text-sm text-foreground">{successMessage}</p>
+        <p className="text-xs text-muted">
+          Kiểm tra hộp thư đến (và thư rác) để xác minh email trước khi đăng nhập.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -60,6 +96,25 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         placeholder="ban@dreamkit.vn"
       />
       <TextField
+        label="Số điện thoại"
+        name="phone"
+        type="tel"
+        autoComplete="tel"
+        value={values.phone}
+        error={errors.phone}
+        onChange={(event) => update("phone", event.target.value)}
+        placeholder="0901234567"
+      />
+      <TextField
+        label="Địa chỉ"
+        name="address"
+        autoComplete="street-address"
+        value={values.address}
+        error={errors.address}
+        onChange={(event) => update("address", event.target.value)}
+        placeholder="123 Đường ABC, Quận 1, TP.HCM"
+      />
+      <TextField
         label="Mật khẩu"
         name="password"
         type="password"
@@ -80,8 +135,10 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
         placeholder="Nhập lại mật khẩu"
       />
 
-      <Button type="submit" size="lg" className="mt-1 w-full">
-        Tạo tài khoản
+      {formError ? <p className="text-xs text-red-600">{formError}</p> : null}
+
+      <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
       </Button>
     </form>
   );

@@ -2,9 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { HERO_IMAGE, PRODUCTS } from "@/lib/products";
-
-const HERO_PRODUCTS = PRODUCTS.slice(0, 3);
+import { HERO_IMAGE } from "@/lib/products";
+import { HeroProducts } from "./hero-products";
 
 export function Hero() {
   return (
@@ -44,7 +43,7 @@ export function Hero() {
             <Button
               variant="outline"
               size="lg"
-              className="border-accent-foreground text-accent-foreground hover:bg-accent-foreground hover:text-accent"
+              className="border-accent-foreground hover:cursor-pointer text-white hover:bg-accent-foreground hover:text-accent"
             >
               Liên hệ thiết kế
             </Button>
@@ -55,22 +54,7 @@ export function Hero() {
           <Stat value="120+" label="Đội bóng đồng hành" />
           <Stat value="100%" label="Made in Vietnam" />
           <Stat value="7 ngày" label="Giao mẫu thiết kế" />
-          <ul className="ml-auto hidden items-center gap-3 md:flex">
-            {HERO_PRODUCTS.map((product) => (
-              <li
-                key={product.id}
-                className="relative size-16 overflow-hidden rounded-card border border-accent-foreground/20"
-              >
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              </li>
-            ))}
-          </ul>
+          <HeroProducts />
         </div>
       </Container>
     </section>
