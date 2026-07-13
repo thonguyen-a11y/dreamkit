@@ -30,21 +30,13 @@ import {
 
 } from "@/lib/orders";
 
-import {
-
-  deleteProduct as deleteProductInList,
-
-  upsertProduct as upsertProductInList,
-
-  validateProduct,
-
-} from "@/lib/product-admin";
-
 import { fetchProductsApi } from "@/lib/products-api";
 
 import { PRODUCTS } from "@/lib/products";
 
 import type { Order, OrderStatus, Product } from "@/lib/types";
+
+import { useToast } from "@/components/ui/toast-context";
 
 import { StoreContext, type StoreContextValue } from "./store-context";
 
@@ -96,6 +88,8 @@ function readOrders(): readonly Order[] {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
 
+  const { showToast } = useToast();
+
   const [products, setProducts] = useState<readonly Product[]>([]);
 
   const [orders, setOrders] = useState<readonly Order[]>([]);
@@ -128,7 +122,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     setProductsError(result.message);
 
-  }, []);
+    showToast(result.message, "error");
+
+  }, [showToast]);
 
 
 
@@ -190,46 +186,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
 
 
-  const upsertProduct = useCallback(
-
-    (product: Product, originalId?: string): boolean => {
-
-      const errors = validateProduct(product, products, originalId);
-
-      if (Object.keys(errors).length > 0) {
-
-        return false;
-
-      }
-
-      setProducts((current) => upsertProductInList(current, product, originalId));
-
-      return true;
-
-    },
-
-    [products],
-
-  );
-
-
-
-  const deleteProduct = useCallback((id: string) => {
-
-    setProducts((current) => deleteProductInList(current, id));
-
-  }, []);
-
-
-
-  const resetProducts = useCallback(() => {
-
-    void refreshProducts();
-
-  }, [refreshProducts]);
-
-
-
   const createOrderAction = useCallback(
 
     (input: CreateOrderInput): Order | null => {
@@ -284,12 +240,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       refreshProducts,
 
-      upsertProduct,
-
-      deleteProduct,
-
-      resetProducts,
-
       createOrder: createOrderAction,
 
       updateOrderStatus: updateOrderStatusAction,
@@ -309,12 +259,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       productsError,
 
       refreshProducts,
-
-      upsertProduct,
-
-      deleteProduct,
-
-      resetProducts,
 
       createOrderAction,
 

@@ -10,9 +10,6 @@ export interface StoreContextValue {
   readonly isHydrated: boolean;
   readonly productsError: string | null;
   readonly refreshProducts: () => Promise<void>;
-  readonly upsertProduct: (product: Product, originalId?: string) => boolean;
-  readonly deleteProduct: (id: string) => void;
-  readonly resetProducts: () => void;
   readonly createOrder: (input: CreateOrderInput) => Order | null;
   readonly updateOrderStatus: (id: string, status: OrderStatus) => void;
   readonly deleteOrder: (id: string) => void;

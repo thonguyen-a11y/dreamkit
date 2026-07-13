@@ -22,7 +22,7 @@ const API_PRODUCT = {
 describe("resolveProductImage", () => {
   it("prefixes relative upload paths", () => {
     expect(resolveProductImage("/uploads/2024/11/photo.jpg")).toBe(
-      "https://dreamkit.vn/wp-content/uploads/2024/11/photo.jpg",
+      "https://dreamkit.tedtech.asia/uploads/2024/11/photo.jpg",
     );
   });
 
@@ -44,10 +44,11 @@ describe("mapApiProductToProduct", () => {
       colors: ["blue"],
       primaryColor: "blue",
       image:
-        "https://dreamkit.vn/wp-content/uploads/2024/11/gen-h-z7195942007819_db522f4d24bf24bd339b4166925a0983-300x300.jpg",
+        "https://dreamkit.tedtech.asia/uploads/2024/11/gen-h-z7195942007819_db522f4d24bf24bd339b4166925a0983-300x300.jpg",
       collar: "polo",
       type: "set",
       isNew: false,
+      stock: undefined,
     });
   });
 

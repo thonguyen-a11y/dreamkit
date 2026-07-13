@@ -27,9 +27,14 @@ describe("slugifyProductId", () => {
 });
 
 describe("validateProduct", () => {
-  it("flags duplicate ids", () => {
-    const errors = validateProduct(BASE, [BASE]);
-    expect(errors.id).toBeTruthy();
+  it("flags a missing name", () => {
+    const errors = validateProduct({ ...BASE, name: "" });
+    expect(errors.name).toBeTruthy();
+  });
+
+  it("passes for a valid product", () => {
+    const errors = validateProduct(BASE);
+    expect(errors).toEqual({});
   });
 });
 

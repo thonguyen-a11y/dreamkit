@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import { applyDiscountCode, type DiscountApplyFailureReason } from "@/lib/discount-codes";
 import { validateDiscountCodeApi } from "@/lib/discount-codes-api";
 import { formatPrice } from "@/lib/products";
@@ -30,11 +32,11 @@ interface AppliedDiscount {
 
 export function CartView() {
   const { items, subtotal, count, removeItem, setQuantity, clear } = useCart();
+  const { showToast } = useToast();
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
-  const [discountError, setDiscountError] = useState<string | null>(null);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
 
   const total = subtotal - (appliedDiscount?.amount ?? 0);
@@ -46,30 +48,29 @@ export function CartView() {
     }
 
     setIsApplyingDiscount(true);
-    setDiscountError(null);
 
     const result = await validateDiscountCodeApi(code);
     if (!result.ok) {
-      setDiscountError("Mã giảm giá không tồn tại.");
+      showToast("Mã giảm giá không tồn tại.", "error");
       setIsApplyingDiscount(false);
       return;
     }
 
     const applied = applyDiscountCode(result.discountCode, subtotal);
     if (!applied.ok) {
-      setDiscountError(DISCOUNT_REASON_MESSAGES[applied.reason]);
+      showToast(DISCOUNT_REASON_MESSAGES[applied.reason], "error");
       setIsApplyingDiscount(false);
       return;
     }
 
     setAppliedDiscount({ code: result.discountCode.code, amount: applied.discountAmount });
+    showToast(`Đã áp dụng mã ${result.discountCode.code}.`, "success");
     setIsApplyingDiscount(false);
   }
 
   function handleRemoveDiscount() {
     setAppliedDiscount(null);
     setDiscountInput("");
-    setDiscountError(null);
   }
 
   if (orderNumber) {
@@ -192,11 +193,11 @@ export function CartView() {
                 disabled={isApplyingDiscount || !discountInput.trim()}
                 onClick={() => void handleApplyDiscount()}
               >
+                {isApplyingDiscount ? <Spinner /> : null}
                 Áp dụng
               </Button>
             </div>
           )}
-          {discountError ? <p className="text-xs text-red-600">{discountError}</p> : null}
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-border pt-6">

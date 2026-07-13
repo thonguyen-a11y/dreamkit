@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import {
   isValid,
   validateRegister,
@@ -26,9 +28,9 @@ interface RegisterFormProps {
 
 export function RegisterForm({ onRegistered }: RegisterFormProps) {
   const { register } = useAuthModal();
+  const { showToast } = useToast();
   const [values, setValues] = useState<RegisterValues>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors<RegisterValues>>({});
-  const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,7 +42,6 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
     event.preventDefault();
     const nextErrors = validateRegister(values);
     setErrors(nextErrors);
-    setFormError(null);
     setSuccessMessage(null);
 
     if (!isValid(nextErrors)) {
@@ -51,10 +52,11 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
     try {
       const result = await register(values);
       if (!result.ok) {
-        setFormError(result.message);
+        showToast(result.message, "error");
         return;
       }
 
+      showToast(result.message, "success");
       setSuccessMessage(result.message);
       setValues(EMPTY);
       onRegistered(result.email);
@@ -135,9 +137,8 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
         placeholder="Nhập lại mật khẩu"
       />
 
-      {formError ? <p className="text-xs text-red-600">{formError}</p> : null}
-
       <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner /> : null}
         {isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
       </Button>
     </form>

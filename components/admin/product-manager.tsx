@@ -2,14 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import { useStore } from "@/components/store/store-context";
 import { COLOR_META } from "@/lib/products";
+import { validateProduct, type ProductFieldErrors } from "@/lib/product-admin";
 import {
-  slugifyProductId,
-  validateProduct,
-  type ProductFieldErrors,
-} from "@/lib/product-admin";
+  createProductApi,
+  deleteProductApi,
+  resolveProductImage,
+  updateProductApi,
+  type ProductInput,
+} from "@/lib/products-api";
+import { uploadImageApi } from "@/lib/uploads-api";
 import { formatPrice } from "@/lib/products";
 import type { CollarType, ColorKey, Product, ProductType } from "@/lib/types";
 import { cn } from "@/lib/cn";
@@ -25,18 +32,38 @@ const EMPTY_PRODUCT: Product = {
   collar: "regular",
   type: "set",
   isNew: false,
+  stock: 0,
 };
 
 const COLOR_OPTIONS = Object.keys(COLOR_META) as ColorKey[];
 const COLLAR_OPTIONS: CollarType[] = ["regular", "polo"];
 const TYPE_OPTIONS: ProductType[] = ["set", "jersey", "polo-shirt"];
 
+function toInput(product: Product): ProductInput {
+  return {
+    name: product.name,
+    price: product.price,
+    category: product.category,
+    colors: product.colors,
+    primaryColor: product.primaryColor,
+    image: product.image,
+    collar: product.collar,
+    type: product.type,
+    isNew: product.isNew,
+    stock: product.stock,
+  };
+}
+
 export function ProductManager() {
-  const { products, upsertProduct, deleteProduct, resetProducts } = useStore();
+  const { accessToken } = useAuthModal();
+  const { showToast } = useToast();
+  const { products, refreshProducts } = useStore();
   const [draft, setDraft] = useState<Product>(EMPTY_PRODUCT);
   const [originalId, setOriginalId] = useState<string | undefined>();
   const [errors, setErrors] = useState<ProductFieldErrors>({});
-  const [message, setMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const isEditing = Boolean(originalId);
 
@@ -49,24 +76,39 @@ export function ProductManager() {
     setDraft(EMPTY_PRODUCT);
     setOriginalId(undefined);
     setErrors({});
-    setMessage(null);
   }
 
   function startEdit(product: Product) {
     setDraft(product);
     setOriginalId(product.id);
     setErrors({});
-    setMessage(null);
   }
 
   function updateDraft<K extends keyof Product>(field: K, value: Product[K]) {
-    setDraft((current) => {
-      const next = { ...current, [field]: value };
-      if (field === "name" && !originalId) {
-        next.id = slugifyProductId(String(value));
-      }
-      return next;
-    });
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    if (!accessToken) {
+      showToast("Bạn cần đăng nhập với quyền quản trị để tải ảnh lên.", "error");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const result = await uploadImageApi(accessToken, file);
+    setIsUploadingImage(false);
+
+    if (!result.ok) {
+      showToast(result.message, "error");
+      return;
+    }
+
+    updateDraft("image", result.url);
   }
 
   function toggleColor(color: ColorKey) {
@@ -79,30 +121,59 @@ export function ProductManager() {
     });
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextErrors = validateProduct(draft, products, originalId);
+    if (!accessToken) {
+      showToast("Bạn cần đăng nhập với quyền quản trị để thực hiện thao tác này.", "error");
+      return;
+    }
+
+    const nextErrors = validateProduct(draft);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
-    const saved = upsertProduct(draft, originalId);
-    if (!saved) {
-      setMessage("Không thể lưu sản phẩm. Vui lòng kiểm tra lại thông tin.");
+    setIsSubmitting(true);
+    const input = toInput(draft);
+    const result = originalId
+      ? await updateProductApi(accessToken, originalId, input)
+      : await createProductApi(accessToken, input);
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      showToast(result.message, "error");
       return;
     }
 
-    setMessage(isEditing ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm mới.");
+    await refreshProducts();
+    showToast(isEditing ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm mới.", "success");
     startCreate();
   }
 
-  function handleDelete(id: string) {
-    if (window.confirm("Xoá sản phẩm này?")) {
-      deleteProduct(id);
-      if (originalId === id) {
-        startCreate();
-      }
+  async function handleDelete(product: Product) {
+    if (!accessToken) {
+      showToast("Bạn cần đăng nhập với quyền quản trị để thực hiện thao tác này.", "error");
+      return;
+    }
+
+    if (!window.confirm("Xoá sản phẩm này?")) {
+      return;
+    }
+
+    setPendingId(product.id);
+    const result = await deleteProductApi(accessToken, product.id);
+    setPendingId(null);
+
+    if (!result.ok) {
+      showToast(result.message, "error");
+      return;
+    }
+
+    await refreshProducts();
+    showToast("Đã xoá sản phẩm.", "success");
+    if (originalId === product.id) {
+      startCreate();
     }
   }
 
@@ -119,8 +190,8 @@ export function ProductManager() {
           <Button type="button" variant="outline" onClick={startCreate}>
             Thêm mới
           </Button>
-          <Button type="button" variant="ghost" onClick={resetProducts}>
-            Khôi phục mặc định
+          <Button type="button" variant="ghost" onClick={() => void refreshProducts()}>
+            Tải lại
           </Button>
         </div>
       </div>
@@ -133,54 +204,60 @@ export function ProductManager() {
                 <tr>
                   <th className="px-4 py-3">Sản phẩm</th>
                   <th className="px-4 py-3">Giá</th>
+                  <th className="px-4 py-3">Tồn kho</th>
                   <th className="px-4 py-3">Loại</th>
                   <th className="px-4 py-3">Mới</th>
                   <th className="px-4 py-3">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.map((product) => (
-                  <tr key={product.id} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative size-12 overflow-hidden rounded-card border border-border">
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
+                {sortedProducts.map((product) => {
+                  const isPending = pendingId === product.id;
+                  return (
+                    <tr key={product.id} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative size-12 overflow-hidden rounded-card border border-border">
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{product.name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-foreground">{product.name}</p>
-                          <p className="text-xs text-muted">{product.id}</p>
+                      </td>
+                      <td className="px-4 py-4">{formatPrice(product.price)}</td>
+                      <td className="px-4 py-4">{product.stock ?? "—"}</td>
+                      <td className="px-4 py-4">{product.type}</td>
+                      <td className="px-4 py-4">{product.isNew ? "Có" : "Không"}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(product)}
+                            className="text-xs font-medium uppercase tracking-label text-foreground underline-offset-4 hover:underline"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => void handleDelete(product)}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+                          >
+                            {isPending ? <Spinner className="size-3" /> : null}
+                            Xoá
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">{formatPrice(product.price)}</td>
-                    <td className="px-4 py-4">{product.type}</td>
-                    <td className="px-4 py-4">{product.isNew ? "Có" : "Không"}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(product)}
-                          className="text-xs font-medium uppercase tracking-label text-foreground underline-offset-4 hover:underline"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(product.id)}
-                          className="text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline"
-                        >
-                          Xoá
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -190,16 +267,8 @@ export function ProductManager() {
           <h2 className="font-display text-xl text-foreground">
             {isEditing ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm"}
           </h2>
-          {message ? <p className="mt-3 text-sm text-highlight">{message}</p> : null}
 
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-            <Field label="Mã sản phẩm" error={errors.id}>
-              <input
-                value={draft.id}
-                onChange={(event) => updateDraft("id", event.target.value)}
-                className={INPUT_CLASS}
-              />
-            </Field>
             <Field label="Tên sản phẩm" error={errors.name}>
               <input
                 value={draft.name}
@@ -207,15 +276,26 @@ export function ProductManager() {
                 className={INPUT_CLASS}
               />
             </Field>
-            <Field label="Giá (VND)" error={errors.price}>
-              <input
-                type="number"
-                min={0}
-                value={draft.price}
-                onChange={(event) => updateDraft("price", Number(event.target.value))}
-                className={INPUT_CLASS}
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Giá (VND)" error={errors.price}>
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.price}
+                  onChange={(event) => updateDraft("price", Number(event.target.value))}
+                  className={INPUT_CLASS}
+                />
+              </Field>
+              <Field label="Tồn kho" error={errors.stock}>
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.stock ?? 0}
+                  onChange={(event) => updateDraft("stock", Number(event.target.value))}
+                  className={INPUT_CLASS}
+                />
+              </Field>
+            </div>
             <Field label="Danh mục" error={errors.category}>
               <input
                 value={draft.category}
@@ -223,10 +303,36 @@ export function ProductManager() {
                 className={INPUT_CLASS}
               />
             </Field>
-            <Field label="Ảnh (URL)" error={errors.image}>
+            <Field label="Ảnh sản phẩm" error={errors.image}>
+              <div className="flex items-center gap-4">
+                {draft.image ? (
+                  <div className="relative size-16 shrink-0 overflow-hidden rounded-card border border-border">
+                    <Image
+                      src={resolveProductImage(draft.image)}
+                      alt={draft.name || "Ảnh sản phẩm"}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : null}
+                <div className="flex flex-1 flex-col gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => void handleImageChange(event)}
+                    disabled={isUploadingImage}
+                    className={cn(INPUT_CLASS, "cursor-pointer py-2")}
+                  />
+                  {isUploadingImage ? (
+                    <span className="text-xs text-muted">Đang tải ảnh lên…</span>
+                  ) : null}
+                </div>
+              </div>
               <input
                 value={draft.image}
                 onChange={(event) => updateDraft("image", event.target.value)}
+                placeholder="Hoặc dán URL ảnh"
                 className={INPUT_CLASS}
               />
             </Field>
@@ -309,7 +415,12 @@ export function ProductManager() {
               />
               Đánh dấu là sản phẩm mới
             </label>
-            <Button type="submit" className="mt-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting || isUploadingImage}
+              className="mt-2"
+            >
+              {isSubmitting ? <Spinner /> : null}
               {isEditing ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
             </Button>
           </form>
@@ -320,7 +431,7 @@ export function ProductManager() {
 }
 
 const INPUT_CLASS =
-  "h-11 w-full rounded-card border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-foreground";
+  "h-11 w-full rounded-card border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-foreground disabled:opacity-50";
 
 function Field({
   label,

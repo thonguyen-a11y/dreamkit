@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { Button } from "@/components/ui/button";
+import { LoadingOverlay, Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import { deleteUserApi, fetchUsersApi, updateUserRoleApi } from "@/lib/users-api";
 import type { User, UserRole } from "@/lib/types";
 
@@ -13,11 +15,10 @@ const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
 
 export function UserManager() {
   const { accessToken, user: currentUser } = useAuthModal();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<readonly User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     if (!accessToken) {
@@ -27,12 +28,11 @@ export function UserManager() {
     const result = await fetchUsersApi(accessToken);
     if (result.ok) {
       setUsers(result.users);
-      setError(null);
     } else {
-      setError(result.message);
+      showToast(result.message, "error");
     }
     setIsLoading(false);
-  }, [accessToken]);
+  }, [accessToken, showToast]);
 
   useEffect(() => {
     void loadUsers();
@@ -51,15 +51,14 @@ export function UserManager() {
       return;
     }
     setPendingId(id);
-    setMessage(null);
     const result = await updateUserRoleApi(accessToken, id, role);
     if (result.ok) {
       setUsers((current) =>
         current.map((entry) => (entry.id === id ? result.user : entry)),
       );
-      setMessage("Đã cập nhật vai trò.");
+      showToast("Đã cập nhật vai trò.", "success");
     } else {
-      setMessage(result.message);
+      showToast(result.message, "error");
     }
     setPendingId(null);
   }
@@ -69,13 +68,12 @@ export function UserManager() {
       return;
     }
     setPendingId(id);
-    setMessage(null);
     const result = await deleteUserApi(accessToken, id);
     if (result.ok) {
       setUsers((current) => current.filter((entry) => entry.id !== id));
-      setMessage("Đã xoá tài khoản.");
+      showToast("Đã xoá tài khoản.", "success");
     } else {
-      setMessage(result.message);
+      showToast(result.message, "error");
     }
     setPendingId(null);
   }
@@ -94,13 +92,8 @@ export function UserManager() {
         </Button>
       </div>
 
-      {message ? <p className="text-sm text-highlight">{message}</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
       {isLoading ? (
-        <div className="rounded-card border border-dashed border-border py-20 text-center">
-          <p className="text-sm text-muted">Đang tải danh sách người dùng…</p>
-        </div>
+        <LoadingOverlay label="Đang tải danh sách người dùng…" />
       ) : sortedUsers.length === 0 ? (
         <div className="rounded-card border border-dashed border-border py-20 text-center">
           <p className="font-display text-2xl text-foreground">Chưa có người dùng</p>
@@ -161,8 +154,9 @@ export function UserManager() {
                           type="button"
                           disabled={isPending || isSelf}
                           onClick={() => void handleDelete(user.id)}
-                          className="text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
                         >
+                          {isPending ? <Spinner className="size-3" /> : null}
                           Xoá
                         </button>
                       </td>

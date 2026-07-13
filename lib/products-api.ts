@@ -2,7 +2,7 @@ import { apiFetch } from "./api-client";
 import type { CollarType, ColorKey, Product, ProductType } from "./types";
 
 const UPLOADS_ORIGIN =
-  process.env.NEXT_PUBLIC_UPLOADS_URL ?? "https://dreamkit.vn/wp-content";
+  process.env.NEXT_PUBLIC_UPLOADS_URL ?? "https://dreamkit.tedtech.asia";
 
 const COLOR_KEYS = new Set<ColorKey>([
   "black",
@@ -106,7 +106,111 @@ export function mapApiProductToProduct(apiProduct: ApiProduct): Product | null {
     collar: apiProduct.collar as CollarType,
     type: apiProduct.type as ProductType,
     isNew: apiProduct.isNew,
+    stock: apiProduct.stock,
   };
+}
+
+/** Fields the admin form can create or update a product with. */
+export type ProductInput = Omit<Product, "id">;
+
+export interface ProductMutationSuccess {
+  readonly ok: true;
+  readonly product: Product;
+}
+
+export interface ProductMutationFailure {
+  readonly ok: false;
+  readonly status: number;
+  readonly message: string;
+}
+
+export type ProductMutationResult = ProductMutationSuccess | ProductMutationFailure;
+
+export interface DeleteProductSuccess {
+  readonly ok: true;
+}
+
+export interface DeleteProductFailure {
+  readonly ok: false;
+  readonly status: number;
+  readonly message: string;
+}
+
+export type DeleteProductResult = DeleteProductSuccess | DeleteProductFailure;
+
+function authHeaders(accessToken: string): HeadersInit {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+function mutationFailure(
+  status: number,
+  message: string,
+): ProductMutationFailure {
+  return { ok: false, status, message };
+}
+
+/** Creates a product. Admin only. */
+export async function createProductApi(
+  accessToken: string,
+  input: ProductInput,
+): Promise<ProductMutationResult> {
+  const result = await apiFetch<ApiProduct>("/api/products", {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(input),
+  });
+
+  if (!result.ok) {
+    return mutationFailure(result.status, result.message);
+  }
+
+  const product = mapApiProductToProduct(result.data);
+  if (!product) {
+    return mutationFailure(0, "Máy chủ trả về dữ liệu sản phẩm không hợp lệ.");
+  }
+
+  return { ok: true, product };
+}
+
+/** Updates a product. Admin only. */
+export async function updateProductApi(
+  accessToken: string,
+  id: string,
+  input: Partial<ProductInput>,
+): Promise<ProductMutationResult> {
+  const result = await apiFetch<ApiProduct>(`/api/products/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(input),
+  });
+
+  if (!result.ok) {
+    return mutationFailure(result.status, result.message);
+  }
+
+  const product = mapApiProductToProduct(result.data);
+  if (!product) {
+    return mutationFailure(0, "Máy chủ trả về dữ liệu sản phẩm không hợp lệ.");
+  }
+
+  return { ok: true, product };
+}
+
+/** Deletes a product. Admin only. */
+export async function deleteProductApi(
+  accessToken: string,
+  id: string,
+): Promise<DeleteProductResult> {
+  const result = await apiFetch<undefined>(`/api/products/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+  });
+
+  if (!result.ok) {
+    return { ok: false, status: result.status, message: result.message };
+  }
+
+  return { ok: true };
 }
 
 /** Fetches the public product catalog from the API. */

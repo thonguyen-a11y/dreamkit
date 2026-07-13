@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import {
   isValid,
   validateLogin,
@@ -20,16 +22,15 @@ interface LoginFormProps {
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const { authenticate, login } = useAuthModal();
+  const { showToast } = useToast();
   const [values, setValues] = useState<LoginValues>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors<LoginValues>>({});
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateLogin(values);
     setErrors(nextErrors);
-    setFormError(null);
 
     if (!isValid(nextErrors)) {
       return;
@@ -39,7 +40,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       const result = await authenticate(values);
       if (!result.ok) {
-        setFormError(result.message);
+        showToast(result.message, "error");
         return;
       }
 
@@ -77,8 +78,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         placeholder="••••••••"
       />
 
-      {formError ? <p className="text-xs text-red-600">{formError}</p> : null}
-
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-xs text-muted">
           <input type="checkbox" name="remember" className="size-4 rounded border-border" />
@@ -90,6 +89,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </div>
 
       <Button type="submit" size="lg" className="mt-1 w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner /> : null}
         {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
       </Button>
     </form>

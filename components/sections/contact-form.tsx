@@ -6,6 +6,8 @@ import { contactFormSchema, type ContactFormType } from "@/components/schemas/co
 
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import { submitContactApi } from "@/lib/contacts-api";
 
 const QUANTITY_OPTIONS = [
@@ -38,13 +40,12 @@ export function ContactForm() {
       estimateAmount: "lt_10m",
     },
   });
+  const { showToast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const onSubmit = async (data: ContactFormType) => {
     setIsSubmitting(true);
-    setSubmitError(null);
 
     const result = await submitContactApi({
       name: data.teamName.trim(),
@@ -58,7 +59,7 @@ export function ContactForm() {
     if (result.ok) {
       setIsSubmitted(true);
     } else {
-      setSubmitError(result.message);
+      showToast(result.message, "error");
     }
   };
 
@@ -148,9 +149,8 @@ export function ContactForm() {
         </div>
       </fieldset>
 
-      {submitError ? <p className="text-sm text-red-500">{submitError}</p> : null}
-
       <Button type="submit" size="lg" className="mt-2 w-full hover:cursor-pointer" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner /> : null}
         {isSubmitting ? "Đang gửi..." : "Liên hệ thiết kế ngay"}
       </Button>
     </form>

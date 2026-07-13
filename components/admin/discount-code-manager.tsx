@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { Button } from "@/components/ui/button";
+import { LoadingOverlay, Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-context";
 import {
   computeDiscountCodeStatus,
   deleteDiscountCode as deleteDiscountCodeInList,
@@ -126,13 +128,12 @@ function toInput(candidate: DiscountCode): DiscountCodeInput {
 
 export function DiscountCodeManager() {
   const { accessToken } = useAuthModal();
+  const { showToast } = useToast();
   const [discountCodes, setDiscountCodes] = useState<readonly DiscountCode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
   const [originalId, setOriginalId] = useState<string | undefined>();
   const [errors, setErrors] = useState<DiscountCodeFieldErrors>({});
-  const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -147,12 +148,11 @@ export function DiscountCodeManager() {
     const result = await fetchDiscountCodesApi(accessToken);
     if (result.ok) {
       setDiscountCodes(result.discountCodes);
-      setLoadError(null);
     } else {
-      setLoadError(result.message);
+      showToast(result.message, "error");
     }
     setIsLoading(false);
-  }, [accessToken]);
+  }, [accessToken, showToast]);
 
   useEffect(() => {
     void loadDiscountCodes();
@@ -175,14 +175,12 @@ export function DiscountCodeManager() {
     setDraft(EMPTY_DRAFT);
     setOriginalId(undefined);
     setErrors({});
-    setMessage(null);
   }
 
   function startEdit(discountCode: DiscountCode) {
     setDraft(draftFromDiscountCode(discountCode));
     setOriginalId(discountCode.id);
     setErrors({});
-    setMessage(null);
   }
 
   function updateDraft<K extends keyof DraftState>(field: K, value: DraftState[K]) {
@@ -213,14 +211,14 @@ export function DiscountCodeManager() {
     setIsSubmitting(false);
 
     if (!result.ok) {
-      setMessage(result.message);
+      showToast(result.message, "error");
       return;
     }
 
     setDiscountCodes((current) =>
       upsertDiscountCodeInList(current, result.discountCode, originalId),
     );
-    setMessage(isEditing ? "Đã cập nhật mã giảm giá." : "Đã thêm mã giảm giá mới.");
+    showToast(isEditing ? "Đã cập nhật mã giảm giá." : "Đã thêm mã giảm giá mới.", "success");
     startCreate();
   }
 
@@ -241,11 +239,12 @@ export function DiscountCodeManager() {
     const result = await deleteDiscountCodeApi(accessToken, discountCode.id);
     if (result.ok) {
       setDiscountCodes((current) => deleteDiscountCodeInList(current, discountCode.id));
+      showToast("Đã xoá mã giảm giá.", "success");
       if (originalId === discountCode.id) {
         startCreate();
       }
     } else {
-      setMessage(result.message);
+      showToast(result.message, "error");
     }
     setPendingId(null);
   }
@@ -262,8 +261,12 @@ export function DiscountCodeManager() {
       setDiscountCodes((current) =>
         upsertDiscountCodeInList(current, result.discountCode, discountCode.id),
       );
+      showToast(
+        result.discountCode.isActive ? "Đã bật mã giảm giá." : "Đã tắt mã giảm giá.",
+        "success",
+      );
     } else {
-      setMessage(result.message);
+      showToast(result.message, "error");
     }
     setPendingId(null);
   }
@@ -293,9 +296,6 @@ export function DiscountCodeManager() {
         </div>
       </div>
 
-      {message ? <p className="text-sm text-highlight">{message}</p> : null}
-      {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
-
       <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="overflow-hidden rounded-card border border-border">
           <div className="overflow-x-auto">
@@ -313,8 +313,8 @@ export function DiscountCodeManager() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
-                      Đang tải danh sách mã giảm giá…
+                    <td colSpan={6} className="p-0">
+                      <LoadingOverlay label="Đang tải danh sách mã giảm giá…" />
                     </td>
                   </tr>
                 ) : visibleDiscountCodes.length === 0 ? (
@@ -372,16 +372,18 @@ export function DiscountCodeManager() {
                               type="button"
                               disabled={isPending}
                               onClick={() => void handleToggleActive(discountCode)}
-                              className="text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
                             >
+                              {isPending ? <Spinner className="size-3" /> : null}
                               {discountCode.isActive ? "Tắt" : "Bật"}
                             </button>
                             <button
                               type="button"
                               disabled={isPending}
                               onClick={() => void handleDelete(discountCode)}
-                              className="text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
                             >
+                              {isPending ? <Spinner className="size-3" /> : null}
                               Xoá
                             </button>
                           </div>
@@ -498,6 +500,7 @@ export function DiscountCodeManager() {
               Kích hoạt mã giảm giá
             </label>
             <Button type="submit" disabled={isSubmitting} className="mt-2">
+              {isSubmitting ? <Spinner /> : null}
               {isEditing ? "Cập nhật mã giảm giá" : "Thêm mã giảm giá"}
             </Button>
           </form>

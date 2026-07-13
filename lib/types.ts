@@ -43,6 +43,8 @@ export interface Product {
   readonly collar: CollarType;
   readonly type: ProductType;
   readonly isNew: boolean;
+  /** Units currently in stock. */
+  readonly stock?: number;
 }
 
 export interface Testimonial {

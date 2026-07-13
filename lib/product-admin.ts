@@ -61,22 +61,8 @@ export function parseProducts(value: unknown): readonly Product[] {
   });
 }
 
-export function validateProduct(
-  product: Product,
-  existingProducts: readonly Product[],
-  originalId?: string,
-): ProductFieldErrors {
+export function validateProduct(product: Product): ProductFieldErrors {
   const errors: ProductFieldErrors = {};
-
-  if (!product.id.trim()) {
-    errors.id = "Mã sản phẩm là bắt buộc";
-  } else if (
-    existingProducts.some(
-      (entry) => entry.id === product.id && entry.id !== originalId,
-    )
-  ) {
-    errors.id = "Mã sản phẩm đã tồn tại";
-  }
 
   if (!product.name.trim()) {
     errors.name = "Tên sản phẩm là bắt buộc";
@@ -110,6 +96,13 @@ export function validateProduct(
 
   if (!PRODUCT_TYPES.includes(product.type)) {
     errors.type = "Loại sản phẩm không hợp lệ";
+  }
+
+  if (
+    product.stock !== undefined &&
+    (!Number.isFinite(product.stock) || product.stock < 0)
+  ) {
+    errors.stock = "Tồn kho phải là số không âm";
   }
 
   return errors;
