@@ -137,6 +137,19 @@ export async function createOrderApi(
   return { ok: true, order: mapApiOrderToOrder(result.data) };
 }
 
+/** Looks up a single order by its public tracking hash. No auth required. */
+export async function trackOrderByHashApi(hash: string): Promise<OrderMutationResult> {
+  const result = await apiFetch<ApiOrder>(`/api/orders/track/${encodeURIComponent(hash)}`, {
+    method: "GET",
+  });
+
+  if (!result.ok) {
+    return { ok: false, status: result.status, message: result.message };
+  }
+
+  return { ok: true, order: mapApiOrderToOrder(result.data) };
+}
+
 export interface FetchOrdersSuccess {
   readonly ok: true;
   readonly orders: readonly Order[];

@@ -1,4 +1,4 @@
-import type { OrderStatus } from "./types";
+import type { OrderStatus, PaymentMethod } from "./types";
 
 export const ORDER_STATUS_LABELS: Readonly<Record<OrderStatus, string>> = {
   pending: "Chờ xác nhận",
@@ -15,3 +15,8 @@ export const ORDER_STATUSES: readonly OrderStatus[] = [
   "delivered",
   "cancelled",
 ];
+
+export const PAYMENT_METHOD_LABELS: Readonly<Record<PaymentMethod, string>> = {
+  bank: "Chuyển khoản",
+  cash: "Tiền mặt",
+};

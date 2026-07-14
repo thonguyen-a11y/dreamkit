@@ -82,9 +82,16 @@ export function CartView() {
         <p className="max-w-md text-sm text-muted">
           Cảm ơn bạn! Mã đơn hàng của bạn là{" "}
           <span className="font-semibold text-foreground">{orderHash}</span>.
-          Dreamkit sẽ liên hệ xác nhận trong thời gian sớm nhất.
+          Dreamkit sẽ liên hệ xác nhận trong thời gian sớm nhất. Bạn có thể tra
+          cứu trạng thái đơn hàng bất cứ lúc nào tại liên kết bên dưới.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
+          <Link
+            href={`/track-order?hash=${encodeURIComponent(orderHash)}`}
+            className={cn(LINK_BUTTON_CLASS)}
+          >
+            Tra cứu đơn hàng
+          </Link>
           <Link href="/shop" className={cn(LINK_BUTTON_CLASS)}>
             Tiếp tục mua sắm
           </Link>

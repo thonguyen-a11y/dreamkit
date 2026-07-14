@@ -3,6 +3,7 @@ import {
   createOrderApi,
   fetchOrdersApi,
   mapApiOrderToOrder,
+  trackOrderByHashApi,
   type ApiOrder,
 } from "./orders-api";
 
@@ -190,5 +191,51 @@ describe("fetchOrdersApi", () => {
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer token");
+  });
+});
+
+describe("trackOrderByHashApi", () => {
+  const fetchMock = vi.fn();
+
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("fetches the order by hash without auth headers", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => API_ORDER,
+    });
+
+    const result = await trackOrderByHashApi("abc-123");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.order.hash).toBe("abc-123");
+    }
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/orders/track/abc-123");
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
+  it("returns the backend's not-found message on failure", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Order with hash "bad-hash" not found' }),
+    });
+
+    const result = await trackOrderByHashApi("bad-hash");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(404);
+      expect(result.message).toBe('Order with hash "bad-hash" not found');
+    }
   });
 });

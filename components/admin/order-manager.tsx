@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useStore } from "@/components/store/store-context";
 import { formatPrice } from "@/lib/products";
-import { ORDER_STATUS_LABELS, ORDER_STATUSES } from "@/lib/orders";
+import { ORDER_STATUS_LABELS, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types";
 
 export function OrderManager() {
@@ -57,6 +57,20 @@ export function OrderManager() {
                   <p className="mt-2 text-sm text-muted">
                     {order.name ?? "Khách"} · {order.phone ?? "—"}
                     {order.email ? ` · ${order.email}` : ""}
+                  </p>
+                  <p className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="rounded-full border border-border px-2 py-0.5 text-muted">
+                      {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-medium ${
+                        order.isPaid
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {order.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                    </span>
                   </p>
                 </div>
 

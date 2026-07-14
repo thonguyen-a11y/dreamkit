@@ -18,6 +18,7 @@ const NAV_LINKS: readonly NavLink[] = [
   { label: "Catalogue", href: "/catalogue" },
   { label: "Hành trình", href: "/#journey" },
   { label: "FAQs", href: "/faqs" },
+  { label: "Tra cứu đơn hàng", href: "/track-order" },
 ];
 
 export function SiteHeader() {
