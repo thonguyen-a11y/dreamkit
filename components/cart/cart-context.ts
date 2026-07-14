@@ -2,14 +2,16 @@
 
 import { createContext, useContext } from "react";
 import type { CartDetailLine } from "@/lib/cart";
+import type { ProductSize } from "@/lib/product-sizes";
+import type { ColorKey } from "@/lib/types";
 
 export interface CartContextValue {
   readonly items: readonly CartDetailLine[];
   readonly subtotal: number;
   readonly count: number;
-  readonly addItem: (id: string, quantity?: number) => void;
-  readonly removeItem: (id: string) => void;
-  readonly setQuantity: (id: string, quantity: number) => void;
+  readonly addItem: (id: string, color: ColorKey, size: ProductSize, quantity?: number) => void;
+  readonly removeItem: (id: string, color: ColorKey, size: ProductSize) => void;
+  readonly setQuantity: (id: string, color: ColorKey, size: ProductSize, quantity: number) => void;
   readonly clear: () => void;
 }
 

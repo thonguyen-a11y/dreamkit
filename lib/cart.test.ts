@@ -29,41 +29,67 @@ const PRODUCTS = [product("a", 100), product("b", 200)];
 
 describe("addLine", () => {
   it("appends a new line", () => {
-    expect(addLine([], "a")).toEqual([{ id: "a", quantity: 1 }]);
+    expect(addLine([], "a", "red", "M")).toEqual([
+      { id: "a", color: "red", size: "M", quantity: 1 },
+    ]);
   });
 
-  it("merges quantity into an existing line", () => {
-    const lines = addLine([{ id: "a", quantity: 2 }], "a", 3);
-    expect(lines).toEqual([{ id: "a", quantity: 5 }]);
+  it("merges quantity into an existing line with the same variant", () => {
+    const lines = addLine(
+      [{ id: "a", color: "red", size: "M", quantity: 2 }],
+      "a",
+      "red",
+      "M",
+      3,
+    );
+    expect(lines).toEqual([{ id: "a", color: "red", size: "M", quantity: 5 }]);
+  });
+
+  it("keeps a different colour/size as a separate line", () => {
+    const lines = addLine(
+      [{ id: "a", color: "red", size: "M", quantity: 2 }],
+      "a",
+      "blue",
+      "L",
+      1,
+    );
+    expect(lines).toEqual([
+      { id: "a", color: "red", size: "M", quantity: 2 },
+      { id: "a", color: "blue", size: "L", quantity: 1 },
+    ]);
   });
 
   it("clamps quantity to the max", () => {
-    expect(addLine([], "a", 500)[0].quantity).toBe(99);
+    expect(addLine([], "a", "red", "M", 500)[0].quantity).toBe(99);
   });
 });
 
 describe("setLineQuantity", () => {
   it("updates an absolute quantity", () => {
-    expect(setLineQuantity([{ id: "a", quantity: 1 }], "a", 4)).toEqual([
-      { id: "a", quantity: 4 },
-    ]);
+    expect(
+      setLineQuantity([{ id: "a", color: "red", size: "M", quantity: 1 }], "a", "red", "M", 4),
+    ).toEqual([{ id: "a", color: "red", size: "M", quantity: 4 }]);
   });
 
   it("removes the line when set below 1", () => {
-    expect(setLineQuantity([{ id: "a", quantity: 1 }], "a", 0)).toEqual([]);
+    expect(
+      setLineQuantity([{ id: "a", color: "red", size: "M", quantity: 1 }], "a", "red", "M", 0),
+    ).toEqual([]);
   });
 });
 
 describe("removeLine / cartCount", () => {
   it("removes a line", () => {
-    expect(removeLine([{ id: "a", quantity: 1 }], "a")).toEqual([]);
+    expect(
+      removeLine([{ id: "a", color: "red", size: "M", quantity: 1 }], "a", "red", "M"),
+    ).toEqual([]);
   });
 
   it("counts total quantity", () => {
     expect(
       cartCount([
-        { id: "a", quantity: 2 },
-        { id: "b", quantity: 3 },
+        { id: "a", color: "red", size: "M", quantity: 2 },
+        { id: "b", color: "blue", size: "L", quantity: 3 },
       ]),
     ).toBe(5);
   });
@@ -72,8 +98,8 @@ describe("removeLine / cartCount", () => {
 describe("summarizeCart", () => {
   it("computes line totals and subtotal", () => {
     const lines: CartLine[] = [
-      { id: "a", quantity: 2 },
-      { id: "b", quantity: 1 },
+      { id: "a", color: "red", size: "M", quantity: 2 },
+      { id: "b", color: "blue", size: "L", quantity: 1 },
     ];
     const summary = summarizeCart(lines, PRODUCTS);
     expect(summary.subtotal).toBe(400);
@@ -83,7 +109,10 @@ describe("summarizeCart", () => {
   });
 
   it("drops lines for unknown products", () => {
-    const summary = summarizeCart([{ id: "ghost", quantity: 1 }], PRODUCTS);
+    const summary = summarizeCart(
+      [{ id: "ghost", color: "red", size: "M", quantity: 1 }],
+      PRODUCTS,
+    );
     expect(summary.items).toHaveLength(0);
     expect(summary.subtotal).toBe(0);
   });
@@ -96,11 +125,12 @@ describe("parseCartLines", () => {
 
   it("keeps only well-formed entries", () => {
     const parsed = parseCartLines([
-      { id: "a", quantity: 2 },
-      { id: "b" },
+      { id: "a", color: "red", size: "M", quantity: 2 },
+      { id: "b", color: "blue" },
       { quantity: 3 },
+      { id: "c", color: "red", size: "NOT-A-SIZE", quantity: 1 },
       42,
     ]);
-    expect(parsed).toEqual([{ id: "a", quantity: 2 }]);
+    expect(parsed).toEqual([{ id: "a", color: "red", size: "M", quantity: 2 }]);
   });
 });

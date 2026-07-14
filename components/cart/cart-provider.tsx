@@ -15,6 +15,8 @@ import {
   summarizeCart,
   type CartLine,
 } from "@/lib/cart";
+import type { ProductSize } from "@/lib/product-sizes";
+import type { ColorKey } from "@/lib/types";
 import { useStore } from "@/components/store/store-context";
 import { CartContext, type CartContextValue } from "./cart-context";
 
@@ -53,15 +55,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [lines, isHydrated]);
 
-  const addItem = useCallback((id: string, quantity = 1) => {
-    setLines((current) => addLine(current, id, quantity));
+  const addItem = useCallback(
+    (id: string, color: ColorKey, size: ProductSize, quantity = 1) => {
+      setLines((current) => addLine(current, id, color, size, quantity));
+    },
+    [],
+  );
+  const removeItem = useCallback((id: string, color: ColorKey, size: ProductSize) => {
+    setLines((current) => removeLine(current, id, color, size));
   }, []);
-  const removeItem = useCallback((id: string) => {
-    setLines((current) => removeLine(current, id));
-  }, []);
-  const setQuantity = useCallback((id: string, quantity: number) => {
-    setLines((current) => setLineQuantity(current, id, quantity));
-  }, []);
+  const setQuantity = useCallback(
+    (id: string, color: ColorKey, size: ProductSize, quantity: number) => {
+      setLines((current) => setLineQuantity(current, id, color, size, quantity));
+    },
+    [],
+  );
   const clear = useCallback(() => setLines([]), []);
 
   const value = useMemo<CartContextValue>(() => {

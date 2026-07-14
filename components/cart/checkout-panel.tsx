@@ -1,59 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useStore } from "@/components/store/store-context";
-import { useCart } from "@/components/cart/cart-context";
+import {
+  checkoutFormSchema,
+  type CheckoutFormType,
+} from "@/components/schemas/checkout.schema";
+import type { PaymentMethod } from "@/lib/types";
+import { useCart } from "./cart-context";
 
 interface CheckoutPanelProps {
   readonly discountCode?: string;
-  readonly discountAmount?: number;
-  readonly onSuccess: (orderNumber: string) => void;
+  readonly onSuccess: (orderHash: string) => void;
 }
 
-export function CheckoutPanel({ discountCode, discountAmount, onSuccess }: CheckoutPanelProps) {
+const PAYMENT_OPTIONS: readonly { readonly value: PaymentMethod; readonly label: string }[] = [
+  { value: "cash", label: "Tiền mặt khi nhận hàng" },
+  { value: "bank", label: "Chuyển khoản ngân hàng" },
+];
+
+export function CheckoutPanel({ discountCode, onSuccess }: CheckoutPanelProps) {
   const { items, clear } = useCart();
   const { createOrder } = useStore();
-  const { user } = useAuthModal();
-  const [name, setName] = useState(user?.name ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [notes, setNotes] = useState("");
+  const { user, isAuthenticated } = useAuthModal();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<CheckoutFormType>({
+    resolver: zodResolver(checkoutFormSchema),
+    defaultValues: {
+      name: user?.name ?? "",
+      phone: user?.phone ?? "",
+      email: user?.email ?? "",
+      note: "",
+      paymentMethod: "cash",
+    },
+  });
 
   useEffect(() => {
     if (user) {
-      setName(user.name);
-      setEmail(user.email);
+      setValue("name", user.name);
+      setValue("email", user.email);
       if (user.phone) {
-        setPhone(user.phone);
+        setValue("phone", user.phone);
       }
     }
-  }, [user]);
+  }, [user, setValue]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(data: CheckoutFormType) {
     setError(null);
 
-    if (!name.trim() || !phone.trim()) {
+    if (!isAuthenticated && (!data.name.trim() || !data.phone.trim())) {
       setError("Vui lòng điền đầy đủ thông tin liên hệ.");
       return;
     }
 
-    const order = createOrder({
-      userId: user?.id,
-      customerName: name,
-      customerPhone: phone,
-      customerEmail: email.trim() || undefined,
-      notes,
-      discountCode,
-      discountAmount,
-      lines: items.map((line) => ({
-        id: line.product.id,
+    setIsSubmitting(true);
+
+    const order = await createOrder({
+      items: items.map((line) => ({
+        productId: line.product.id,
         quantity: line.quantity,
+        color: line.color,
+        size: line.size,
       })),
+      paymentMethod: data.paymentMethod,
+      discountCode,
+      name: data.name.trim() || undefined,
+      phone: data.phone.trim() || undefined,
+      email: data.email.trim() || undefined,
+      note: data.note.trim() || undefined,
     });
+
+    setIsSubmitting(false);
 
     if (!order) {
       setError("Không thể tạo đơn hàng. Vui lòng thử lại.");
@@ -61,42 +90,73 @@ export function CheckoutPanel({ discountCode, discountAmount, onSuccess }: Check
     }
 
     clear();
-    onSuccess(order.orderNumber);
+    onSuccess(order.hash);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4 border-t border-border pt-6">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
+      noValidate
+    >
       <h3 className="text-sm font-semibold uppercase tracking-label text-foreground">
         Thông tin đặt hàng
       </h3>
-      <input
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        placeholder="Họ và tên"
-        className={INPUT_CLASS}
-      />
-      <input
-        value={phone}
-        onChange={(event) => setPhone(event.target.value)}
-        placeholder="Số điện thoại"
-        className={INPUT_CLASS}
-      />
-      <input
-        type="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        placeholder="Email (tuỳ chọn)"
-        className={INPUT_CLASS}
-      />
-      <textarea
-        value={notes}
-        onChange={(event) => setNotes(event.target.value)}
-        placeholder="Ghi chú (tuỳ chọn)"
-        rows={3}
-        className={`${INPUT_CLASS} min-h-24 py-3`}
-      />
+      <div>
+        <input {...register("name")} placeholder="Họ và tên" className={INPUT_CLASS} />
+        {errors.name ? <p className="mt-1 text-xs text-red-600">{errors.name.message}</p> : null}
+      </div>
+      <div>
+        <input {...register("phone")} placeholder="Số điện thoại" className={INPUT_CLASS} />
+        {errors.phone ? <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p> : null}
+      </div>
+      <div>
+        <input
+          type="email"
+          {...register("email")}
+          placeholder="Email (tuỳ chọn)"
+          className={INPUT_CLASS}
+        />
+        {errors.email ? <p className="mt-1 text-xs text-red-600">{errors.email.message}</p> : null}
+      </div>
+      <div>
+        <textarea
+          {...register("note")}
+          placeholder="Ghi chú (tuỳ chọn)"
+          rows={3}
+          className={`${INPUT_CLASS} min-h-24 py-3`}
+        />
+        {errors.note ? <p className="mt-1 text-xs text-red-600">{errors.note.message}</p> : null}
+      </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-xs font-medium uppercase tracking-label text-muted">
+          Phương thức thanh toán
+        </legend>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {PAYMENT_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex flex-1 cursor-pointer items-center gap-2 rounded-card border border-border px-3 py-2.5 text-sm text-foreground has-[:checked]:border-foreground has-[:checked]:bg-surface-strong"
+            >
+              <input
+                type="radio"
+                value={option.value}
+                {...register("paymentMethod")}
+                className="size-3.5"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+        {errors.paymentMethod ? (
+          <p className="text-xs text-red-600">{errors.paymentMethod.message}</p>
+        ) : null}
+      </fieldset>
+
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
-      <Button type="submit" size="lg" className="w-full">
+      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Spinner /> : null}
         Xác nhận đặt hàng
       </Button>
     </form>

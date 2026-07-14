@@ -6,20 +6,19 @@ import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useStore } from "@/components/store/store-context";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/products";
-import { getOrdersForUser, ORDER_STATUS_LABELS } from "@/lib/orders";
+import { ORDER_STATUS_LABELS } from "@/lib/orders";
 
 export function UserProfile() {
   const { user, isAdmin, logout } = useAuthModal();
   const { orders } = useStore();
 
-  const userOrders = useMemo(() => {
-    if (!user) {
-      return [];
-    }
-    return [...getOrdersForUser(orders, user)].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }, [orders, user]);
+  const userOrders = useMemo(
+    () =>
+      [...orders].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [orders],
+  );
 
   if (!user) {
     return null;
@@ -87,7 +86,7 @@ export function UserProfile() {
                       {new Date(order.createdAt).toLocaleString("vi-VN")}
                     </p>
                     <h3 className="mt-1 font-display text-xl text-foreground">
-                      {order.orderNumber}
+                      {order.hash}
                     </h3>
                     <p className="mt-2 text-sm text-muted">
                       {ORDER_STATUS_LABELS[order.status]}
@@ -99,13 +98,13 @@ export function UserProfile() {
                 </div>
 
                 <ul className="mt-4 border-t border-border pt-4 text-sm">
-                  {order.lines.map((line) => (
+                  {order.lines.map((line, index) => (
                     <li
-                      key={`${order.id}-${line.productId}`}
+                      key={`${order.id}-${line.productId}-${index}`}
                       className="flex items-center justify-between gap-4 py-2"
                     >
                       <span className="text-foreground">
-                        {line.productName} × {line.quantity}
+                        {line.productName} ({line.color} · {line.size}) × {line.quantity}
                       </span>
                       <span className="text-muted">{formatPrice(line.lineTotal)}</span>
                     </li>

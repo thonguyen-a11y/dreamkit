@@ -40,11 +40,11 @@ export default function RootLayout({
     <html lang="vi" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen antialiased">
         <ToastProvider>
-          <StoreProvider>
-            <CartProvider>
-              <AuthModalProvider>{children}</AuthModalProvider>
-            </CartProvider>
-          </StoreProvider>
+          <AuthModalProvider>
+            <StoreProvider>
+              <CartProvider>{children}</CartProvider>
+            </StoreProvider>
+          </AuthModalProvider>
         </ToastProvider>
       </body>
     </html>

@@ -6,9 +6,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-context";
+import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { applyDiscountCode, type DiscountApplyFailureReason } from "@/lib/discount-codes";
 import { validateDiscountCodeApi } from "@/lib/discount-codes-api";
-import { formatPrice } from "@/lib/products";
+import { COLOR_META, formatPrice } from "@/lib/products";
 import { cn } from "@/lib/cn";
 import type { CartDetailLine } from "@/lib/cart";
 import { CheckoutPanel } from "./checkout-panel";
@@ -33,7 +34,8 @@ interface AppliedDiscount {
 export function CartView() {
   const { items, subtotal, count, removeItem, setQuantity, clear } = useCart();
   const { showToast } = useToast();
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const { isAuthenticated } = useAuthModal();
+  const [orderHash, setOrderHash] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
@@ -73,22 +75,24 @@ export function CartView() {
     setDiscountInput("");
   }
 
-  if (orderNumber) {
+  if (orderHash) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-card border border-border bg-surface py-24 text-center">
         <p className="font-display text-3xl text-foreground">Đặt hàng thành công</p>
         <p className="max-w-md text-sm text-muted">
           Cảm ơn bạn! Mã đơn hàng của bạn là{" "}
-          <span className="font-semibold text-foreground">{orderNumber}</span>.
+          <span className="font-semibold text-foreground">{orderHash}</span>.
           Dreamkit sẽ liên hệ xác nhận trong thời gian sớm nhất.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           <Link href="/shop" className={cn(LINK_BUTTON_CLASS)}>
             Tiếp tục mua sắm
           </Link>
-          <Link href="/account" className={cn(LINK_BUTTON_CLASS)}>
-            Xem đơn hàng
-          </Link>
+          {isAuthenticated ? (
+            <Link href="/account" className={cn(LINK_BUTTON_CLASS)}>
+              Xem đơn hàng
+            </Link>
+          ) : null}
         </div>
       </div>
     );
@@ -117,11 +121,11 @@ export function CartView() {
         <ul className="border-t border-border">
           {items.map((line) => (
             <CartRow
-              key={line.product.id}
+              key={`${line.product.id}-${line.color}-${line.size}`}
               line={line}
-              onRemove={() => removeItem(line.product.id)}
+              onRemove={() => removeItem(line.product.id, line.color, line.size)}
               onQuantityChange={(quantity) =>
-                setQuantity(line.product.id, quantity)
+                setQuantity(line.product.id, line.color, line.size, quantity)
               }
             />
           ))}
@@ -218,8 +222,7 @@ export function CartView() {
         {showCheckout ? (
           <CheckoutPanel
             discountCode={appliedDiscount?.code}
-            discountAmount={appliedDiscount?.amount}
-            onSuccess={(number) => setOrderNumber(number)}
+            onSuccess={(hash) => setOrderHash(hash)}
           />
         ) : null}
       </aside>
@@ -234,7 +237,7 @@ interface CartRowProps {
 }
 
 function CartRow({ line, onRemove, onQuantityChange }: CartRowProps) {
-  const { product, quantity, lineTotal } = line;
+  const { product, color, size, quantity, lineTotal } = line;
 
   return (
     <li className="flex gap-4 border-b border-border py-6">
@@ -265,6 +268,13 @@ function CartRow({ line, onRemove, onQuantityChange }: CartRowProps) {
           </button>
         </div>
         <p className="text-xs text-muted">{formatPrice(product.price)}</p>
+        <p className="flex items-center gap-1.5 text-xs text-muted">
+          <span
+            className="size-3 rounded-full border border-border"
+            style={{ backgroundColor: COLOR_META[color]?.hex }}
+          />
+          {COLOR_META[color]?.label ?? color} · Cỡ {size}
+        </p>
 
         <div className="mt-auto flex items-center justify-between">
           <QuantityStepper quantity={quantity} onChange={onQuantityChange} />

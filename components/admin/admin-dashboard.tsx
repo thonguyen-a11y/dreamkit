@@ -47,8 +47,8 @@ export function AdminDashboard() {
             {orders.slice(0, 5).map((order) => (
               <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <div>
-                  <p className="font-medium text-foreground">{order.orderNumber}</p>
-                  <p className="text-sm text-muted">{order.customerName}</p>
+                  <p className="font-medium text-foreground">{order.hash}</p>
+                  <p className="text-sm text-muted">{order.name ?? "Khách"}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-foreground">{formatPrice(order.total)}</p>

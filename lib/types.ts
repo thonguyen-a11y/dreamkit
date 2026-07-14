@@ -106,14 +106,16 @@ export interface CatalogueCollection {
   readonly items: readonly CatalogueItem[];
 }
 
-/** Lifecycle status for a customer order. */
+/** Lifecycle status for a customer order (mirrors the backend's OrderStatus enum). */
 export type OrderStatus =
   | "pending"
   | "confirmed"
-  | "processing"
   | "shipped"
   | "delivered"
   | "cancelled";
+
+/** How the customer pays for an order (mirrors the backend's PaymentMethod enum). */
+export type PaymentMethod = "bank" | "cash";
 
 /** Application role used for route access control. */
 export type UserRole = "admin" | "customer";
@@ -133,26 +135,34 @@ export interface OrderLine {
   readonly unitPrice: number;
   readonly quantity: number;
   readonly lineTotal: number;
+  readonly color: ColorKey;
+  readonly size: string;
 }
 
 export interface Order {
   readonly id: string;
-  readonly orderNumber: string;
+  /** Random tracking reference from the backend; shown to customers as their order reference. */
+  readonly hash: string;
   readonly userId?: string;
-  readonly customerName: string;
-  readonly customerPhone: string;
-  readonly customerEmail?: string;
+  readonly name?: string;
+  readonly phone?: string;
+  readonly email?: string;
   readonly lines: readonly OrderLine[];
+  /** Derived client-side: sum of each line's lineTotal (the backend doesn't persist it separately). */
   readonly subtotal: number;
   /** Normalized discount code applied to this order, if any. */
   readonly discountCode?: string;
-  /** Amount deducted from the subtotal by the discount code; 0 if none applied. */
-  readonly discountAmount: number;
-  /** Amount actually charged: subtotal minus discountAmount. */
+  /** Percentage the discount code resolved to at checkout, if any. */
+  readonly discountPercent?: number;
+  /** Flat amount subtracted after the percentage discount; 0 if none applied. */
+  readonly discount: number;
+  /** Amount actually charged. */
   readonly total: number;
+  readonly paymentMethod: PaymentMethod;
+  readonly isPaid: boolean;
   readonly status: OrderStatus;
   readonly createdAt: string;
-  readonly notes?: string;
+  readonly note?: string;
 }
 
 

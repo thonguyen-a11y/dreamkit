@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { CreateOrderInput } from "@/lib/orders";
+import type { CreateOrderInput } from "@/lib/orders-api";
 import type { Order, OrderStatus, Product } from "@/lib/types";
 
 export interface StoreContextValue {
@@ -9,10 +9,12 @@ export interface StoreContextValue {
   readonly orders: readonly Order[];
   readonly isHydrated: boolean;
   readonly productsError: string | null;
+  readonly ordersError: string | null;
   readonly refreshProducts: () => Promise<void>;
-  readonly createOrder: (input: CreateOrderInput) => Order | null;
-  readonly updateOrderStatus: (id: string, status: OrderStatus) => void;
-  readonly deleteOrder: (id: string) => void;
+  readonly refreshOrders: () => Promise<void>;
+  readonly createOrder: (input: CreateOrderInput) => Promise<Order | null>;
+  readonly updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  readonly deleteOrder: (id: string) => Promise<void>;
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null);

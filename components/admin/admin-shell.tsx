@@ -14,7 +14,7 @@ export function AdminShell({ children }: AdminShellProps) {
     <AdminGuard>
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-surface">
-          <Container className="flex h-16 items-center justify-between">
+          <Container className="max-w-full flex h-16 items-center justify-between">
             <div className="flex flex-col">
               <Link href="/admin" className="font-display text-2xl font-semibold">
                 Dreamkit Admin
@@ -30,7 +30,7 @@ export function AdminShell({ children }: AdminShellProps) {
           </Container>
         </header>
 
-        <Container className="grid gap-10 py-10 lg:grid-cols-[220px_1fr]">
+        <Container className="max-w-full grid gap-10 py-10 lg:grid-cols-[220px_1fr]">
           <aside className="h-fit rounded-card border border-border bg-surface p-4">
             <AdminNav />
           </aside>

@@ -19,7 +19,7 @@ export function OrderManager() {
 
   function handleDelete(id: string) {
     if (window.confirm("Xoá đơn hàng này?")) {
-      deleteOrder(id);
+      void deleteOrder(id);
     }
   }
 
@@ -52,11 +52,11 @@ export function OrderManager() {
                     {new Date(order.createdAt).toLocaleString("vi-VN")}
                   </p>
                   <h2 className="mt-1 font-display text-2xl text-foreground">
-                    {order.orderNumber}
+                    {order.hash}
                   </h2>
                   <p className="mt-2 text-sm text-muted">
-                    {order.customerName} · {order.customerPhone}
-                    {order.customerEmail ? ` · ${order.customerEmail}` : ""}
+                    {order.name ?? "Khách"} · {order.phone ?? "—"}
+                    {order.email ? ` · ${order.email}` : ""}
                   </p>
                 </div>
 
@@ -64,20 +64,20 @@ export function OrderManager() {
                   <span className="font-display text-2xl text-foreground">
                     {formatPrice(order.total)}
                   </span>
-                  {order.discountAmount > 0 ? (
+                  {order.discount > 0 || order.discountCode ? (
                     <span className="text-xs text-muted">
                       Tạm tính {formatPrice(order.subtotal)} · Giảm{" "}
-                      {formatPrice(order.discountAmount)}
+                      {formatPrice(order.discount)}
                       {order.discountCode ? ` (${order.discountCode})` : ""}
                     </span>
                   ) : null}
                   <select
                     value={order.status}
                     onChange={(event) =>
-                      updateOrderStatus(order.id, event.target.value as OrderStatus)
+                      void updateOrderStatus(order.id, event.target.value as OrderStatus)
                     }
                     className="h-10 rounded-card border border-border bg-background px-3 text-sm text-foreground"
-                    aria-label={`Trạng thái đơn ${order.orderNumber}`}
+                    aria-label={`Trạng thái đơn ${order.hash}`}
                   >
                     {ORDER_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -89,21 +89,21 @@ export function OrderManager() {
               </div>
 
               <ul className="mt-6 border-t border-border pt-4 text-sm">
-                {order.lines.map((line) => (
+                {order.lines.map((line, index) => (
                   <li
-                    key={`${order.id}-${line.productId}`}
+                    key={`${order.id}-${line.productId}-${index}`}
                     className="flex items-center justify-between gap-4 py-2"
                   >
                     <span className="text-foreground">
-                      {line.productName} × {line.quantity}
+                      {line.productName} ({line.color} · {line.size}) × {line.quantity}
                     </span>
                     <span className="text-muted">{formatPrice(line.lineTotal)}</span>
                   </li>
                 ))}
               </ul>
 
-              {order.notes ? (
-                <p className="mt-4 text-sm text-muted">Ghi chú: {order.notes}</p>
+              {order.note ? (
+                <p className="mt-4 text-sm text-muted">Ghi chú: {order.note}</p>
               ) : null}
 
               <div className="mt-4 flex justify-end">

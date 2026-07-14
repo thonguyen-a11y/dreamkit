@@ -240,7 +240,7 @@ export function ProductManager() {
         </div>
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.5fr_0.5fr]">
         <section className="overflow-hidden rounded-card border border-border">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">

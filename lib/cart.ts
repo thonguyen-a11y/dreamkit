@@ -1,14 +1,19 @@
-import type { Product } from "./types";
+import { isProductSize, type ProductSize } from "./product-sizes";
+import type { ColorKey, Product } from "./types";
 
-/** A single line in the cart: a product reference + quantity. */
+/** A single line in the cart: a product + colour/size variant + quantity. */
 export interface CartLine {
   readonly id: string;
+  readonly color: ColorKey;
+  readonly size: ProductSize;
   readonly quantity: number;
 }
 
 /** A cart line resolved against the catalogue, ready for display. */
 export interface CartDetailLine {
   readonly product: Product;
+  readonly color: ColorKey;
+  readonly size: ProductSize;
   readonly quantity: number;
   readonly lineTotal: number;
 }
@@ -25,41 +30,53 @@ function clampQuantity(quantity: number): number {
   return Math.max(1, Math.min(MAX_QUANTITY, Math.floor(quantity)));
 }
 
-/** Adds `quantity` of a product, merging with an existing line if present. */
+function isSameVariant(line: CartLine, id: string, color: ColorKey, size: ProductSize): boolean {
+  return line.id === id && line.color === color && line.size === size;
+}
+
+/** Adds `quantity` of a product variant, merging with an existing line if present. */
 export function addLine(
   lines: readonly CartLine[],
   id: string,
+  color: ColorKey,
+  size: ProductSize,
   quantity = 1,
 ): readonly CartLine[] {
-  const existing = lines.find((line) => line.id === id);
+  const existing = lines.find((line) => isSameVariant(line, id, color, size));
   if (existing) {
     return lines.map((line) =>
-      line.id === id
+      isSameVariant(line, id, color, size)
         ? { ...line, quantity: clampQuantity(line.quantity + quantity) }
         : line,
     );
   }
-  return [...lines, { id, quantity: clampQuantity(quantity) }];
+  return [...lines, { id, color, size, quantity: clampQuantity(quantity) }];
 }
 
 export function removeLine(
   lines: readonly CartLine[],
   id: string,
+  color: ColorKey,
+  size: ProductSize,
 ): readonly CartLine[] {
-  return lines.filter((line) => line.id !== id);
+  return lines.filter((line) => !isSameVariant(line, id, color, size));
 }
 
 /** Sets an absolute quantity; a value below 1 removes the line entirely. */
 export function setLineQuantity(
   lines: readonly CartLine[],
   id: string,
+  color: ColorKey,
+  size: ProductSize,
   quantity: number,
 ): readonly CartLine[] {
   if (quantity < 1) {
-    return removeLine(lines, id);
+    return removeLine(lines, id, color, size);
   }
   return lines.map((line) =>
-    line.id === id ? { ...line, quantity: clampQuantity(quantity) } : line,
+    isSameVariant(line, id, color, size)
+      ? { ...line, quantity: clampQuantity(quantity) }
+      : line,
   );
 }
 
@@ -89,7 +106,13 @@ export function summarizeCart(
     const lineTotal = product.price * line.quantity;
     subtotal += lineTotal;
     count += line.quantity;
-    items.push({ product, quantity: line.quantity, lineTotal });
+    items.push({
+      product,
+      color: line.color,
+      size: line.size,
+      quantity: line.quantity,
+      lineTotal,
+    });
   }
 
   return { items, subtotal, count };
@@ -101,12 +124,23 @@ export function parseCartLines(value: unknown): readonly CartLine[] {
     return [];
   }
   return value
-    .filter(
-      (entry): entry is CartLine =>
-        typeof entry === "object" &&
-        entry !== null &&
-        typeof (entry as CartLine).id === "string" &&
-        typeof (entry as CartLine).quantity === "number",
-    )
-    .map((entry) => ({ id: entry.id, quantity: clampQuantity(entry.quantity) }));
+    .filter((entry): entry is CartLine => {
+      if (typeof entry !== "object" || entry === null) {
+        return false;
+      }
+      const line = entry as CartLine;
+      return (
+        typeof line.id === "string" &&
+        typeof line.color === "string" &&
+        typeof line.size === "string" &&
+        isProductSize(line.size) &&
+        typeof line.quantity === "number"
+      );
+    })
+    .map((entry) => ({
+      id: entry.id,
+      color: entry.color,
+      size: entry.size,
+      quantity: clampQuantity(entry.quantity),
+    }));
 }

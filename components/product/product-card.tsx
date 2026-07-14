@@ -31,7 +31,7 @@ function ProductCardImpl({ product, priority = false }: ProductCardProps) {
         />
 
         <div className="absolute inset-x-0 bottom-0 translate-y-full p-4 transition-transform duration-300 ease-out group-hover:translate-y-0">
-          <AddToCartButton productId={product.id} />
+          <AddToCartButton product={product} />
         </div>
       </div>
 
