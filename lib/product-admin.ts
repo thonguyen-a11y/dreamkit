@@ -76,8 +76,12 @@ export function validateProduct(product: Product): ProductFieldErrors {
     errors.category = "Danh mục là bắt buộc";
   }
 
-  if (!product.image.trim()) {
-    errors.image = "Ảnh sản phẩm là bắt buộc";
+  if (!product.images || product.images.length === 0) {
+    errors.images = "Cần ít nhất một ảnh sản phẩm";
+  } else if (
+    product.images.some((entry) => !entry.url.trim() || !COLOR_KEYS.includes(entry.color))
+  ) {
+    errors.images = "Mỗi ảnh cần có URL và màu hợp lệ";
   }
 
   if (product.colors.length === 0) {

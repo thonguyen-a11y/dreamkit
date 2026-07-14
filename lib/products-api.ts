@@ -1,5 +1,5 @@
 import { apiFetch } from "./api-client";
-import type { CollarType, ColorKey, Product, ProductType } from "./types";
+import type { CollarType, ColorKey, Product, ProductImage, ProductType } from "./types";
 
 const UPLOADS_ORIGIN =
   process.env.NEXT_PUBLIC_UPLOADS_URL ?? "https://dreamkit.tedtech.asia";
@@ -20,6 +20,13 @@ const COLOR_KEYS = new Set<ColorKey>([
 const COLLAR_TYPES = new Set<CollarType>(["regular", "polo"]);
 const PRODUCT_TYPES = new Set<ProductType>(["set", "jersey", "polo-shirt"]);
 
+/** Product image shape returned by the NestJS products API. */
+export interface ApiProductImage {
+  readonly url: string;
+  readonly color: string;
+  readonly position?: number;
+}
+
 /** Product shape returned by the NestJS products API. */
 export interface ApiProduct {
   readonly _id: string;
@@ -30,6 +37,7 @@ export interface ApiProduct {
   readonly colors: readonly string[];
   readonly primaryColor: string;
   readonly image: string;
+  readonly images?: readonly ApiProductImage[];
   readonly collar: string;
   readonly type: string;
   readonly isNew: boolean;
@@ -95,6 +103,16 @@ export function mapApiProductToProduct(apiProduct: ApiProduct): Product | null {
     return null;
   }
 
+  const images: readonly ProductImage[] = (apiProduct.images ?? [])
+    .filter((entry): entry is ApiProductImage & { color: ColorKey } => isColorKey(entry.color))
+    .map((entry) => ({
+      url: resolveProductImage(entry.url),
+      color: entry.color,
+      position: entry.position,
+    }))
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
   return {
     id: apiProduct._id,
     name: apiProduct.name,
@@ -103,6 +121,10 @@ export function mapApiProductToProduct(apiProduct: ApiProduct): Product | null {
     colors,
     primaryColor: apiProduct.primaryColor,
     image: resolveProductImage(apiProduct.image),
+    images:
+      images.length > 0
+        ? images
+        : [{ url: resolveProductImage(apiProduct.image), color: apiProduct.primaryColor, position: 0 }],
     collar: apiProduct.collar as CollarType,
     type: apiProduct.type as ProductType,
     isNew: apiProduct.isNew,

@@ -29,6 +29,14 @@ export interface ColorMeta {
   readonly hex: string;
 }
 
+/** A single product photo, tagged to the colour variant it depicts. */
+export interface ProductImage {
+  readonly url: string;
+  readonly color: ColorKey;
+  /** Sort order among a product's images; index 0 is the cover photo. */
+  readonly position?: number;
+}
+
 export interface Product {
   readonly id: string;
   readonly name: string;
@@ -38,8 +46,10 @@ export interface Product {
   readonly colors: readonly ColorKey[];
   /** Primary colour drives the product card artwork gradient. */
   readonly primaryColor: ColorKey;
-  /** Absolute URL to the product photo (sourced from dreamkit.vn). */
+  /** Absolute URL to the product photo; always equal to images[0].url. */
   readonly image: string;
+  /** Gallery of product photos; images[0] is the cover shown as `image`. */
+  readonly images?: readonly ProductImage[];
   readonly collar: CollarType;
   readonly type: ProductType;
   readonly isNew: boolean;

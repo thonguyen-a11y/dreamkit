@@ -29,6 +29,7 @@ const EMPTY_PRODUCT: Product = {
   colors: ["black"],
   primaryColor: "black",
   image: "",
+  images: [],
   collar: "regular",
   type: "set",
   isNew: false,
@@ -40,13 +41,20 @@ const COLLAR_OPTIONS: CollarType[] = ["regular", "polo"];
 const TYPE_OPTIONS: ProductType[] = ["set", "jersey", "polo-shirt"];
 
 function toInput(product: Product): ProductInput {
+  const images = (product.images ?? []).map((entry, index) => ({
+    url: entry.url,
+    color: entry.color,
+    position: index,
+  }));
+
   return {
     name: product.name,
     price: product.price,
     category: product.category,
     colors: product.colors,
     primaryColor: product.primaryColor,
-    image: product.image,
+    image: images[0]?.url ?? product.image,
+    images,
     collar: product.collar,
     type: product.type,
     isNew: product.isNew,
@@ -88,7 +96,7 @@ export function ProductManager() {
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
-  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAddImage(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) {
@@ -108,7 +116,43 @@ export function ProductManager() {
       return;
     }
 
-    updateDraft("image", result.url);
+    setDraft((current) => {
+      const images = [
+        ...(current.images ?? []),
+        { url: result.url, color: current.primaryColor },
+      ];
+      return { ...current, images, image: images[0].url };
+    });
+  }
+
+  function updateImageColor(index: number, color: ColorKey) {
+    setDraft((current) => {
+      const images = (current.images ?? []).map((entry, i) =>
+        i === index ? { ...entry, color } : entry,
+      );
+      return { ...current, images };
+    });
+  }
+
+  function removeImage(index: number) {
+    setDraft((current) => {
+      const images = (current.images ?? []).filter((_, i) => i !== index);
+      return { ...current, images, image: images[0]?.url ?? "" };
+    });
+  }
+
+  function moveImage(index: number, direction: -1 | 1) {
+    setDraft((current) => {
+      const images = [...(current.images ?? [])];
+      const target = index + direction;
+      if (target < 0 || target >= images.length) {
+        return current;
+      }
+      const temp = images[index];
+      images[index] = images[target];
+      images[target] = temp;
+      return { ...current, images, image: images[0]?.url ?? "" };
+    });
   }
 
   function toggleColor(color: ColorKey) {
@@ -303,24 +347,74 @@ export function ProductManager() {
                 className={INPUT_CLASS}
               />
             </Field>
-            <Field label="Ảnh sản phẩm" error={errors.image}>
-              <div className="flex items-center gap-4">
-                {draft.image ? (
-                  <div className="relative size-16 shrink-0 overflow-hidden rounded-card border border-border">
-                    <Image
-                      src={resolveProductImage(draft.image)}
-                      alt={draft.name || "Ảnh sản phẩm"}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
-                    />
+            <Field label="Hình ảnh sản phẩm" error={errors.images}>
+              <div className="flex flex-col gap-3">
+                {(draft.images ?? []).map((entry, index) => (
+                  <div
+                    key={`${entry.url}-${index}`}
+                    className="flex items-center gap-3 rounded-card border border-border p-3"
+                  >
+                    <div className="relative size-14 shrink-0 overflow-hidden rounded-card border border-border">
+                      <Image
+                        src={resolveProductImage(entry.url)}
+                        alt=""
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <select
+                      value={entry.color}
+                      onChange={(event) =>
+                        updateImageColor(index, event.target.value as ColorKey)
+                      }
+                      className={cn(INPUT_CLASS, "flex-1")}
+                    >
+                      {COLOR_OPTIONS.map((color) => (
+                        <option key={color} value={color}>
+                          {COLOR_META[color].label}
+                        </option>
+                      ))}
+                    </select>
+                    {index === 0 ? (
+                      <span className="shrink-0 text-xs uppercase tracking-label text-muted">
+                        Ảnh bìa
+                      </span>
+                    ) : null}
+                    <div className="flex shrink-0 flex-col">
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, -1)}
+                        disabled={index === 0}
+                        aria-label="Đưa lên trước"
+                        className="text-muted hover:text-foreground disabled:opacity-30"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 1)}
+                        disabled={index === (draft.images?.length ?? 0) - 1}
+                        aria-label="Đưa xuống sau"
+                        className="text-muted hover:text-foreground disabled:opacity-30"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="shrink-0 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline"
+                    >
+                      Xoá
+                    </button>
                   </div>
-                ) : null}
-                <div className="flex flex-1 flex-col gap-2">
+                ))}
+                <div className="flex flex-col gap-2">
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(event) => void handleImageChange(event)}
+                    onChange={(event) => void handleAddImage(event)}
                     disabled={isUploadingImage}
                     className={cn(INPUT_CLASS, "cursor-pointer py-2")}
                   />
@@ -329,12 +423,6 @@ export function ProductManager() {
                   ) : null}
                 </div>
               </div>
-              <input
-                value={draft.image}
-                onChange={(event) => updateDraft("image", event.target.value)}
-                placeholder="Hoặc dán URL ảnh"
-                className={INPUT_CLASS}
-              />
             </Field>
             <Field label="Màu chính" error={errors.primaryColor}>
               <select

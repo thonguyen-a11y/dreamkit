@@ -15,6 +15,7 @@ const BASE: Product = {
   colors: ["red"],
   primaryColor: "red",
   image: "https://example.com/a.jpg",
+  images: [{ url: "https://example.com/a.jpg", color: "red", position: 0 }],
   collar: "regular",
   type: "set",
   isNew: true,
@@ -35,6 +36,11 @@ describe("validateProduct", () => {
   it("passes for a valid product", () => {
     const errors = validateProduct(BASE);
     expect(errors).toEqual({});
+  });
+
+  it("flags a product with no images", () => {
+    const errors = validateProduct({ ...BASE, images: [] });
+    expect(errors.images).toBeTruthy();
   });
 });
 

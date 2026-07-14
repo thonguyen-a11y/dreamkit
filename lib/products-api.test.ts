@@ -45,11 +45,33 @@ describe("mapApiProductToProduct", () => {
       primaryColor: "blue",
       image:
         "https://dreamkit.tedtech.asia/uploads/2024/11/gen-h-z7195942007819_db522f4d24bf24bd339b4166925a0983-300x300.jpg",
+      images: [
+        {
+          url: "https://dreamkit.tedtech.asia/uploads/2024/11/gen-h-z7195942007819_db522f4d24bf24bd339b4166925a0983-300x300.jpg",
+          color: "blue",
+          position: 0,
+        },
+      ],
       collar: "polo",
       type: "set",
       isNew: false,
       stock: undefined,
     });
+  });
+
+  it("maps a populated images array, sorted by position", () => {
+    const product = mapApiProductToProduct({
+      ...API_PRODUCT,
+      images: [
+        { url: "/uploads/b.jpg", color: "black", position: 1 },
+        { url: "/uploads/a.jpg", color: "blue", position: 0 },
+      ],
+    });
+
+    expect(product?.images).toEqual([
+      { url: "https://dreamkit.tedtech.asia/uploads/a.jpg", color: "blue", position: 0 },
+      { url: "https://dreamkit.tedtech.asia/uploads/b.jpg", color: "black", position: 1 },
+    ]);
   });
 
   it("rejects products with invalid colours", () => {
