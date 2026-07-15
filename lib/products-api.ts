@@ -42,6 +42,8 @@ export interface ApiProduct {
   readonly type: string;
   readonly isNew: boolean;
   readonly stock?: number;
+  readonly collectionName?: string;
+  readonly collectionImages?: readonly string[];
   readonly createdAt?: string;
   readonly updatedAt?: string;
   readonly __v?: number;
@@ -129,6 +131,8 @@ export function mapApiProductToProduct(apiProduct: ApiProduct): Product | null {
     type: apiProduct.type as ProductType,
     isNew: apiProduct.isNew,
     stock: apiProduct.stock,
+    collectionName: apiProduct.collectionName,
+    collectionImages: apiProduct.collectionImages?.map(resolveProductImage),
   };
 }
 

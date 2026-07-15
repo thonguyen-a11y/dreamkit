@@ -313,12 +313,19 @@ export const FEATURED_STORY: FeaturedStory = {
 export const HERO_IMAGE = "/images/ANH-BIA.jpg";
 
 const VND_FORMATTER = new Intl.NumberFormat("vi-VN", {
-  style: "currency",
-  currency: "VND",
   maximumFractionDigits: 0,
 });
 
-/** Formats a VND price, e.g. 210000 -> "210.000 ₫". */
+/**
+ * Formats a VND price, e.g. 210000 -> "210.000 ₫".
+ *
+ * Deliberately avoids `style: "currency"`: the whitespace Intl inserts
+ * between the number and the currency symbol comes from ICU locale data,
+ * which can differ between Node's bundled ICU (server render) and the
+ * browser's ICU (client render) — producing a React hydration mismatch even
+ * for a "0 ₫" placeholder. Formatting the digits and appending a literal
+ * space keeps the string byte-identical across environments.
+ */
 export function formatPrice(value: number): string {
-  return VND_FORMATTER.format(value);
+  return `${VND_FORMATTER.format(value)} ₫`;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { ToastContext, type ToastContextValue, type ToastVariant } from "./toast-context";
@@ -23,6 +23,15 @@ const VARIANT_CLASSES: Record<ToastVariant, string> = {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
   const nextId = useRef(0);
+  // `document` exists during SSR-vs-hydration checks too, so branching on
+  // `typeof document` alone renders `null` on the server but the portal on
+  // the client's hydration pass — a hydration mismatch. Gating on a flag
+  // that only flips in an effect keeps both passes rendering `null`.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -42,7 +51,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {typeof document !== "undefined"
+      {mounted
         ? createPortal(
             <div className="pointer-events-none fixed inset-x-0 top-4 z-100 flex flex-col items-center gap-2 px-4 sm:left-auto sm:right-4 sm:items-end">
               {toasts.map((toast) => (

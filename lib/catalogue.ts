@@ -1,4 +1,5 @@
-import type { CatalogueCollection, ColorKey } from "./types";
+import { slugifyProductId } from "./product-admin";
+import type { CatalogueCollection, CatalogueItem, ColorKey, Product } from "./types";
 
 const CATALOGUE_IMAGES = "/images/catalogue";
 
@@ -201,6 +202,59 @@ export const CATALOGUE_COLLECTIONS: readonly CatalogueCollection[] = [
     ],
   },
 ];
+
+/**
+ * Groups products by `collectionName` and turns each group's `collectionImages`
+ * into a catalogue gallery. Products with no collection name or no collection
+ * images don't contribute a collection. Image URLs shared by several products
+ * in the same collection are deduplicated; an item's colours are the union of
+ * the colours of every product that supplied that image.
+ */
+export function buildCatalogueCollectionsFromProducts(
+  products: readonly Product[],
+): readonly CatalogueCollection[] {
+  const order: string[] = [];
+  const imagesByName = new Map<string, Map<string, ColorKey[]>>();
+
+  for (const product of products) {
+    const name = product.collectionName?.trim();
+    const images = product.collectionImages ?? [];
+    if (!name || images.length === 0) {
+      continue;
+    }
+
+    let imageColors = imagesByName.get(name);
+    if (!imageColors) {
+      imageColors = new Map();
+      imagesByName.set(name, imageColors);
+      order.push(name);
+    }
+
+    for (const url of images) {
+      const colors = imageColors.get(url) ?? [];
+      for (const color of product.colors) {
+        if (!colors.includes(color)) {
+          colors.push(color);
+        }
+      }
+      imageColors.set(url, colors);
+    }
+  }
+
+  return order.map((name) => {
+    const id = slugifyProductId(name);
+    const items: CatalogueItem[] = [...imagesByName.get(name)!.entries()].map(
+      ([url, colors], index) => ({
+        id: `${id}-${index}`,
+        image: url,
+        fullImage: url,
+        alt: name,
+        colors,
+      }),
+    );
+    return { id, title: name, items };
+  });
+}
 
 /** Returns every colour that appears in at least one catalogue item. */
 export function getCatalogueFilterColors(

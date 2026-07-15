@@ -4,26 +4,36 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ColorFilter } from "@/components/product/color-filter";
 import { Container } from "@/components/ui/container";
+import { Spinner } from "@/components/ui/spinner";
+import { useStore } from "@/components/store/store-context";
 import { useCatalogueFilter } from "@/hooks/use-catalogue-filter";
 import { SUPPORT_HOTLINE } from "@/lib/faqs";
 import {
-  CATALOGUE_COLLECTIONS,
+  buildCatalogueCollectionsFromProducts,
   getCatalogueFilterColors,
 } from "@/lib/catalogue";
 import type { CatalogueItem } from "@/lib/types";
 import { CatalogueLightbox } from "./catalogue-lightbox";
 import { CollectionSection } from "./collection-section";
 
-const FILTER_COLORS = getCatalogueFilterColors(CATALOGUE_COLLECTIONS);
-
 export function CatalogueView() {
+  const { products, isHydrated } = useStore();
+  const collections = useMemo(
+    () => buildCatalogueCollectionsFromProducts(products),
+    [products],
+  );
+  const filterColors = useMemo(
+    () => getCatalogueFilterColors(collections),
+    [collections],
+  );
+
   const {
     activeColors,
     filteredCollections,
     toggleColor,
     clearFilters,
     isFiltering,
-  } = useCatalogueFilter(CATALOGUE_COLLECTIONS);
+  } = useCatalogueFilter(collections);
 
   const [lightboxItemId, setLightboxItemId] = useState<string | null>(null);
   const visibleItems = useMemo(
@@ -44,10 +54,10 @@ export function CatalogueView() {
         <p className="text-sm text-muted">
           {isFiltering
             ? `Đang hiển thị ${filteredCollections.length} bộ sưu tập phù hợp`
-            : `${CATALOGUE_COLLECTIONS.length} bộ sưu tập thiết kế áo đấu`}
+            : `${collections.length} bộ sưu tập thiết kế áo đấu`}
         </p>
         <ColorFilter
-          colors={FILTER_COLORS}
+          colors={filterColors}
           activeColors={activeColors}
           onToggle={toggleColor}
           onClear={clearFilters}
@@ -55,7 +65,14 @@ export function CatalogueView() {
         />
       </Container>
 
-      {filteredCollections.length > 0 ? (
+      {!isHydrated && collections.length === 0 ? (
+        <Container>
+          <div className="flex flex-col items-center gap-3 py-20 text-center">
+            <Spinner />
+            <p className="text-sm text-muted">Đang tải bộ sưu tập…</p>
+          </div>
+        </Container>
+      ) : filteredCollections.length > 0 ? (
         <Container className="flex flex-col gap-20">
           {filteredCollections.map((collection, index) => (
             <CollectionSection
@@ -70,18 +87,24 @@ export function CatalogueView() {
         <Container>
           <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-border py-20 text-center">
             <p className="font-display text-2xl text-foreground">
-              Không có thiết kế phù hợp
+              {collections.length === 0
+                ? "Chưa có bộ sưu tập nào"
+                : "Không có thiết kế phù hợp"}
             </p>
             <p className="text-sm text-muted">
-              Thử bỏ bớt bộ lọc màu để xem thêm bộ sưu tập.
+              {collections.length === 0
+                ? "Bộ sưu tập sẽ xuất hiện khi sản phẩm được gắn tên và ảnh bộ sưu tập."
+                : "Thử bỏ bớt bộ lọc màu để xem thêm bộ sưu tập."}
             </p>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="mt-2 text-xs font-medium uppercase tracking-label text-foreground underline underline-offset-4"
-            >
-              Xoá bộ lọc
-            </button>
+            {isFiltering ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-2 text-xs font-medium uppercase tracking-label text-foreground underline underline-offset-4"
+              >
+                Xoá bộ lọc
+              </button>
+            ) : null}
           </div>
         </Container>
       )}

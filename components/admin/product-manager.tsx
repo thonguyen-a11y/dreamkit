@@ -34,6 +34,8 @@ const EMPTY_PRODUCT: Product = {
   type: "set",
   isNew: false,
   stock: 0,
+  collectionName: "",
+  collectionImages: [],
 };
 
 const COLOR_OPTIONS = Object.keys(COLOR_META) as ColorKey[];
@@ -59,6 +61,8 @@ function toInput(product: Product): ProductInput {
     type: product.type,
     isNew: product.isNew,
     stock: product.stock,
+    collectionName: product.collectionName,
+    collectionImages: product.collectionImages,
   };
 }
 
@@ -153,6 +157,39 @@ export function ProductManager() {
       images[target] = temp;
       return { ...current, images, image: images[0]?.url ?? "" };
     });
+  }
+
+  async function handleAddCollectionImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    if (!accessToken) {
+      showToast("Bạn cần đăng nhập với quyền quản trị để tải ảnh lên.", "error");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const result = await uploadImageApi(accessToken, file);
+    setIsUploadingImage(false);
+
+    if (!result.ok) {
+      showToast(result.message, "error");
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      collectionImages: [...(current.collectionImages ?? []), result.url],
+    }));
+  }
+
+  function removeCollectionImage(index: number) {
+    setDraft((current) => ({
+      ...current,
+      collectionImages: (current.collectionImages ?? []).filter((_, i) => i !== index),
+    }));
   }
 
   function toggleColor(color: ColorKey) {
@@ -347,6 +384,13 @@ export function ProductManager() {
                 className={INPUT_CLASS}
               />
             </Field>
+            <Field label="Tên bộ sưu tập" error={errors.collectionName}>
+              <input
+                value={draft.collectionName ?? ""}
+                onChange={(event) => updateDraft("collectionName", event.target.value)}
+                className={INPUT_CLASS}
+              />
+            </Field>
             <Field label="Hình ảnh sản phẩm" error={errors.images}>
               <div className="flex flex-col gap-3">
                 {(draft.images ?? []).map((entry, index) => (
@@ -415,6 +459,46 @@ export function ProductManager() {
                     type="file"
                     accept="image/*"
                     onChange={(event) => void handleAddImage(event)}
+                    disabled={isUploadingImage}
+                    className={cn(INPUT_CLASS, "cursor-pointer py-2")}
+                  />
+                  {isUploadingImage ? (
+                    <span className="text-xs text-muted">Đang tải ảnh lên…</span>
+                  ) : null}
+                </div>
+              </div>
+            </Field>
+            <Field label="Ảnh bộ sưu tập" error={errors.collectionImages}>
+              <div className="flex flex-col gap-3">
+                {(draft.collectionImages ?? []).map((url, index) => (
+                  <div
+                    key={`${url}-${index}`}
+                    className="flex items-center gap-3 rounded-card border border-border p-3"
+                  >
+                    <div className="relative size-14 shrink-0 overflow-hidden rounded-card border border-border">
+                      <Image
+                        src={resolveProductImage(url)}
+                        alt=""
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <span className="flex-1 truncate text-xs text-muted">{url}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCollectionImage(index)}
+                      className="shrink-0 text-xs font-medium uppercase tracking-label text-muted underline-offset-4 hover:text-foreground hover:underline"
+                    >
+                      Xoá
+                    </button>
+                  </div>
+                ))}
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => void handleAddCollectionImage(event)}
                     disabled={isUploadingImage}
                     className={cn(INPUT_CLASS, "cursor-pointer py-2")}
                   />

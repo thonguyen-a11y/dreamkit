@@ -55,6 +55,10 @@ export interface Product {
   readonly isNew: boolean;
   /** Units currently in stock. */
   readonly stock?: number;
+  /** Name of the collection this product belongs to, if any. */
+  readonly collectionName?: string;
+  /** Gallery photos showcasing the collection this product belongs to. */
+  readonly collectionImages?: readonly string[];
 }
 
 export interface Testimonial {
