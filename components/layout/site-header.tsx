@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -34,11 +35,15 @@ export function SiteHeader() {
       </p>
 
       <Container className="flex h-16 items-center justify-between">
-        <Link
-          href="/"
-          className="font-display text-2xl font-semibold tracking-tight"
-        >
-          Dreamkit
+        <Link href="/" className="flex items-center" aria-label="Dreamkit">
+          <Image
+            src="/images/logo.png"
+            alt="Dreamkit"
+            width={140}
+            height={84}
+            priority
+            className="h-8 w-auto sm:h-15"
+          />
         </Link>
 
         <nav aria-label="Điều hướng chính" className="hidden md:block">

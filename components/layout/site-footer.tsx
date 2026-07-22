@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Container } from "@/components/ui/container";
 
 interface FooterColumn {
@@ -16,7 +17,13 @@ export function SiteFooter() {
     <footer className="border-t border-border bg-surface">
       <Container className="grid gap-12 py-16 md:grid-cols-[1.5fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
-          <span className="font-display text-2xl font-semibold">Dreamkit</span>
+          <Image
+            src="/images/logo.png"
+            alt="Dreamkit"
+            width={60}
+            height={36}
+            className="h-9"
+          />
           <p className="max-w-xs text-sm leading-relaxed text-muted">
             Thiết kế &amp; sản xuất áo đấu bóng đá riêng cho từng đội bóng. Tự hào
             là sản phẩm được tạo ra tại Việt Nam.
